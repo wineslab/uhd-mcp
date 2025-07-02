@@ -1,0 +1,70 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "uhd-mcp"
+dynamic = ["version"]
+description = 'An MCP for UHD'
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT"
+keywords = []
+authors = [
+  { name = "Andrea Lacava", email = "thecave003@gmail.com" },
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = [
+  "fastmcp>=0.1.0",
+]
+
+[project.urls]
+Documentation = "https://github.com/wineslab/uhd-mcp/README.md"
+Issues = "https://github.com/wineslab/uhd-mcp/issues"
+Source = "https://github.com/wineslab/uhd-mcp"
+
+[tool.hatch.version]
+path = "usrp_mcp_server.py"
+pattern = "__version__ = ['\"](?P<version>[^'\"]*)['\"]"
+
+[tool.hatch.envs.default]
+dependencies = [
+  "fastmcp>=0.1.0",
+]
+
+[tool.hatch.envs.dev]
+dependencies = [
+  "fastmcp>=0.1.0",
+  "pytest",
+  "pytest-asyncio",
+  "black",
+  "ruff",
+]
+
+[tool.hatch.envs.dev.scripts]
+test = "pytest {args:tests}"
+lint = "ruff check {args:.}"
+format = "black {args:.}"
+format-check = "black --check --diff {args:.}"
+type-check = "mypy {args:src}"
+
+[project.scripts]
+usrp-mcp-server = "usrp_mcp_server:main"
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+  "pytest-asyncio", 
+  "black",
+  "ruff",
+]
