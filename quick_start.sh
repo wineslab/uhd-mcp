@@ -20,4 +20,4 @@ fi
 
 # Start the server using Hatch
 echo "Starting USRP MCP Server on port 8080 using Hatch..."
-hatch run python usrp_mcp_server.py --tcp 8080
+hatch run python usrp_mcp_server.py --tcp --port 8080

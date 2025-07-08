@@ -69,7 +69,7 @@ After=network.target
 Type=simple
 User=$USER
 WorkingDirectory=$PWD
-ExecStart=hatch run python usrp_mcp_server.py --tcp 8080
+ExecStart=hatch run python usrp_mcp_server.py --tcp --port 8080
 Restart=always
 RestartSec=10
 Environment=PATH=/usr/bin:/usr/local/bin
@@ -79,6 +79,9 @@ WantedBy=multi-user.target
 EOF
 
 echo "✓ Setup complete!"
-echo "To start the server: hatch run python usrp_mcp_server.py --tcp 8080"
+echo "Usage examples:"
+echo "  hatch run python usrp_mcp_server.py --tcp --port 8080"
+echo "  hatch run python usrp_mcp_server.py --tcp --host 192.168.1.10 --port 9090"
+echo "  hatch run python usrp_mcp_server.py --help"
 echo "To run in shell mode: hatch shell"
 echo "To enable as service: sudo systemctl enable usrp-mcp && sudo systemctl start usrp-mcp"

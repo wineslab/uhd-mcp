@@ -3,8 +3,6 @@
 FastMCP Server for USRP B210 Control via UHD
 """
 
-__version__ = "0.1.0"
-
 from fastmcp import FastMCP
 import subprocess
 import json
@@ -13,6 +11,7 @@ import os
 from typing import Optional, Dict, Any
 import threading
 import time
+import argparse
 
 # Create the MCP server
 mcp = FastMCP("USRP B210 Control Server")
@@ -383,20 +382,56 @@ def get_uhd_info() -> str:
 
 def main():
     """Main entry point for the USRP MCP server"""
-    import sys
     import atexit
+    
+    # Setup argument parser
+    parser = argparse.ArgumentParser(
+        description="USRP B210 FastMCP Server for Software Defined Radio control",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  %(prog)s                           # Start in stdio mode (for MCP clients)
+  %(prog)s --tcp                     # Start TCP server on default port 8080
+  %(prog)s --tcp --port 9090         # Start TCP server on port 9090
+  %(prog)s --tcp --host 192.168.1.10 --port 8080  # Start on specific host/port
+        """
+    )
+    
+    parser.add_argument(
+        "--tcp", 
+        action="store_true",
+        help="Run in TCP mode instead of stdio mode"
+    )
+    
+    parser.add_argument(
+        "--port", 
+        type=int, 
+        default=8080,
+        help="TCP port to listen on (default: 8080)"
+    )
+    
+    parser.add_argument(
+        "--host", 
+        type=str, 
+        default="0.0.0.0",
+        help="Host/IP address to bind to (default: 0.0.0.0 - all interfaces)"
+    )
+    
+    # Parse arguments
+    args = parser.parse_args()
     
     # Cleanup on exit
     atexit.register(cleanup_all_processes)
     
-    # Check for TCP mode
-    if len(sys.argv) > 1 and sys.argv[1] == "--tcp":
-        port = int(sys.argv[2]) if len(sys.argv) > 2 else 8080
-        print(f"Starting USRP B210 FastMCP server on TCP port {port}")
+    # Start server based on mode
+    if args.tcp:
+        print(f"Starting USRP B210 FastMCP server on TCP {args.host}:{args.port}")
         print("Available tools: uhd_find_devices, uhd_usrp_probe, uhd_siggen, uhd_rx_samples_to_file")
-        mcp.run_tcp(port=port, host="0.0.0.0")
+        print("Press Ctrl+C to stop the server")
+        mcp.run_tcp(port=args.port, host=args.host)
     else:
         print("Starting USRP B210 FastMCP server in stdio mode")
+        print("This mode is for MCP clients. For testing, use --tcp flag.")
         mcp.run()
 
 if __name__ == "__main__":

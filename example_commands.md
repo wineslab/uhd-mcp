@@ -3,12 +3,24 @@
 ## Starting the Server
 
 ```bash
-# Start with Hatch (recommended)
-hatch run python usrp_mcp_server.py --tcp 8080
+# Start with Hatch in TCP mode (recommended for testing)
+hatch run python usrp_mcp_server.py --tcp
+
+# Start on specific port
+hatch run python usrp_mcp_server.py --tcp --port 9090
+
+# Start on specific host and port
+hatch run python usrp_mcp_server.py --tcp --host 192.168.1.10 --port 8080
+
+# Start in stdio mode (for MCP clients)
+hatch run python usrp_mcp_server.py
 
 # Or enter Hatch shell first
 hatch shell
-python usrp_mcp_server.py --tcp 8080
+python usrp_mcp_server.py --tcp --port 8080
+
+# Show help and all options
+hatch run python usrp_mcp_server.py --help
 ```
 
 ## Running Tests

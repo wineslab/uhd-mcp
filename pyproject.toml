@@ -34,8 +34,7 @@ Issues = "https://github.com/wineslab/uhd-mcp/issues"
 Source = "https://github.com/wineslab/uhd-mcp"
 
 [tool.hatch.version]
-path = "usrp_mcp_server.py"
-pattern = "__version__ = ['\"](?P<version>[^'\"]*)['\"]"
+path = "VERSION"
 
 [tool.hatch.envs.default]
 dependencies = [
