@@ -52,25 +52,6 @@ hatch env create dev
 
 # Run tests (if configured)
 hatch run test
-
-# Run linting (if configured)
-hatch run lint
-
-# Format code (if configured)
-hatch run format
-```
-
-## Dependency Management
-
-```bash
-# Add runtime dependency
-hatch dep add fastmcp
-
-# Add development dependency
-hatch dep add --dev pytest
-
-# Show dependencies
-hatch dep show
 ```
 
 ## Building and Publishing

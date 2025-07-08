@@ -12,25 +12,26 @@ A Model Context Protocol (MCP) server for controlling USRP B210 software-defined
 
 ## Prerequisites
 
-- **UHD (USRP Hardware Driver)**: Required for USRP communication
-  - Ubuntu/Debian: `sudo apt install uhd-host`
-  - Other systems: [UHD Installation Guide](https://files.ettus.com/manual/)
+- **UHD (USRP Hardware Driver)**: Required for USRP communication ([UHD Installation Guide](https://files.ettus.com/manual/))
 - **Python 3.8+**: For running the server
 - **Hatch**: Modern Python project management (installed automatically by setup script)
 
 ## Quick Setup
 
 1. **Run the setup script**:
+
    ```bash
    ./setup_usrp.sh
    ```
 
 2. **Start the server**:
+
    ```bash
    ./quick_start.sh
    ```
 
    Or manually:
+
    ```bash
    hatch run python usrp_mcp_server.py --tcp 8080
    ```
@@ -93,4 +94,4 @@ See `example_commands.md` for detailed usage examples.
 
 ## License
 
-MIT
+TBD
