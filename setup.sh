@@ -1,21 +1,8 @@
-# setup_usrp.sh - Setup script for USRP B210 with Hatch
+# setup_usrp.sh - Setup script for USRP with Hatch
 #!/bin/bash
 set -x
 
-echo "Setting up USRP B210 FastMCP Server with Hatch..."
-
-# Set up SUDO variable based on environment
-if [ "$(id -u)" -eq 0 ]; then
-    # Running as root, no sudo needed
-    SUDO=""
-elif command -v sudo &> /dev/null; then
-    # Not root but sudo is available
-    SUDO="sudo"
-else
-    # No sudo available and not root
-    SUDO=""
-    echo "⚠️  Warning: Not running as root and sudo not available. Some operations may fail."
-fi
+echo "Setting up USRP FastMCP Server with Hatch..."
 
 # Check if Hatch is installed
 echo "Checking Hatch installation..."
@@ -62,6 +49,16 @@ else
     exit 1
 fi
 
+# Set up SUDO variable based on environment for systemd service creation
+if [ "$(id -u)" -eq 0 ]; then
+    SUDO=""
+elif command -v sudo &> /dev/null; then
+    SUDO="sudo"
+else
+    SUDO=""
+    echo "⚠️  Warning: Not running as root and sudo not available. Systemd service creation may fail."
+fi
+
 # Initialize Hatch environment and install dependencies
 echo "Setting up Hatch environment..."
 
@@ -84,7 +81,7 @@ fi
 PYTHON_EXEC=$($HATCH_CMD run python -c "import sys; print(sys.executable)")
 echo "✅ Using Python: $PYTHON_EXEC"
 
-# Create systemd service
+# Create systemd service for production deployment
 echo "Creating systemd service..."
 
 # Determine the correct hatch path for the service
@@ -128,3 +125,4 @@ echo "To run in shell mode: $HATCH_CMD shell"
 if [ -f "/etc/systemd/system/usrp-mcp.service" ]; then
     echo "To enable as service: ${SUDO} systemctl enable usrp-mcp && ${SUDO} systemctl start usrp-mcp"
 fi
+
