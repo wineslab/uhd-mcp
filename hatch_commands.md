@@ -1,4 +1,4 @@
-# USRP B210 MCP Server - Hatch Development Guide
+# USRP MCP Server - Hatch Development Guide
 
 ## Environment Management
 

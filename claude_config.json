@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "usrp-b210": {
+    "usrp": {
       "command": "ssh",
       "args": [
         "username@your-laptop-ip",

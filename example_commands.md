@@ -1,4 +1,4 @@
-# USRP B210 MCP Server - Example Commands
+# USRP MCP Server - Example Commands
 
 ## Starting the Server
 

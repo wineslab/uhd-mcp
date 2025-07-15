@@ -1,6 +1,6 @@
-# USRP B210 MCP Server
+# USRP MCP Server
 
-A Model Context Protocol (MCP) server for controlling USRP B210 software-defined radios using UHD (USRP Hardware Driver).
+A Model Context Protocol (MCP) server for controlling USRP software-defined radios using UHD (USRP Hardware Driver).
 
 ## Features
 

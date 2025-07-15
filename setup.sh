@@ -66,7 +66,7 @@ echo "Creating systemd service..."
 
 $SUDO tee /etc/systemd/system/usrp-mcp.service > /dev/null << EOF
 [Unit]
-Description=USRP B210 MCP Server
+Description=USRP MCP Server
 After=network.target
 
 [Service]

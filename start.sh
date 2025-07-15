@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "🚀 USRP B210 Quick Start (Hatch Environment)"
+echo "🚀 USRP Quick Start (Hatch Environment)"
 echo "============================================="
 
 # Ensure PATH includes pipx/hatch directories
@@ -32,9 +32,9 @@ echo "Checking for USRP devices..."
 if command -v uhd_find_devices &> /dev/null; then
     UHD_OUTPUT=$(uhd_find_devices 2>/dev/null)
     if echo "$UHD_OUTPUT" | grep -q "type: b200"; then
-        echo "✅ USRP B210 detected!"
+        echo "✅ USRP detected!"
     else
-        echo "⚠️  No USRP B210 found. Starting server anyway (hardware may be connected later)."
+        echo "⚠️  No USRP found. Starting server anyway (hardware may be connected later)."
     fi
 else
     echo "⚠️  UHD tools not found, skipping hardware check."

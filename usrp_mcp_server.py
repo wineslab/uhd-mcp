@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-FastMCP Server for USRP B210 Control via UHD
+FastMCP Server for USRP Control via UHD
 """
 
 from fastmcp import FastMCP
@@ -14,7 +14,7 @@ import time
 import argparse
 
 # Create the MCP server
-mcp = FastMCP("USRP B210 Control Server")
+mcp = FastMCP("USRP Control Server")
 
 # Global variable to track running processes
 running_processes = {}
@@ -85,7 +85,7 @@ def uhd_siggen(
     args: str = ""
 ) -> str:
     """
-    Run uhd_siggen to generate signals on USRP B210
+    Run uhd_siggen to generate signals on USRP
     
     Args:
         freq: RF center frequency in Hz (e.g., 2.4e9 for 2.4 GHz)
@@ -386,7 +386,7 @@ def main():
     
     # Setup argument parser
     parser = argparse.ArgumentParser(
-        description="USRP B210 FastMCP Server for Software Defined Radio control",
+        description="USRP FastMCP Server for Software Defined Radio control",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -425,12 +425,12 @@ Examples:
     
     # Start server based on mode
     if args.tcp:
-        print(f"Starting USRP B210 FastMCP server on TCP {args.host}:{args.port}")
+        print(f"Starting USRP FastMCP server on TCP {args.host}:{args.port}")
         print("Available tools: uhd_find_devices, uhd_usrp_probe, uhd_siggen, uhd_rx_samples_to_file")
         print("Press Ctrl+C to stop the server")
         mcp.run_tcp(port=args.port, host=args.host)
     else:
-        print("Starting USRP B210 FastMCP server in stdio mode")
+        print("Starting USRP FastMCP server in stdio mode")
         print("This mode is for MCP clients. For testing, use --tcp flag.")
         mcp.run()
 
