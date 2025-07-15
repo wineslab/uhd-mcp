@@ -5,6 +5,10 @@ echo "Setting up USRP B210 FastMCP Server with Hatch..."
 
 # Check if Hatch is installed
 echo "Checking Hatch installation..."
+
+# Add pipx bin directory to PATH for this session (common in Docker environments)
+export PATH="$HOME/.local/bin:/root/.local/bin:$PATH"
+
 if ! command -v hatch &> /dev/null; then
     echo "❌ Hatch not found. Installing Hatch..."
     if command -v pipx &> /dev/null; then
@@ -17,15 +21,23 @@ if ! command -v hatch &> /dev/null; then
         pipx install hatch
     fi
     
-    # Source bashrc to update PATH
+    # Update PATH again after installation
+    export PATH="$HOME/.local/bin:/root/.local/bin:$PATH"
+    
+    # Source bashrc to update PATH if it exists
     if [ -f ~/.bashrc ]; then
-        source ~/.bashrc
+        source ~/.bashrc 2>/dev/null || true
     fi
 fi
 
+# Verify hatch is available
 if command -v hatch &> /dev/null; then
-    echo "✓ Hatch found"
+    echo "✓ Hatch found at: $(which hatch)"
     hatch --version
+elif [ -f "/root/.local/bin/hatch" ]; then
+    echo "✓ Hatch found at: /root/.local/bin/hatch"
+    export PATH="/root/.local/bin:$PATH"
+    /root/.local/bin/hatch --version
 else
     echo "❌ Failed to install Hatch. Please install manually: pip install hatch"
     exit 1
@@ -45,21 +57,35 @@ fi
 
 # Initialize Hatch environment and install dependencies
 echo "Setting up Hatch environment..."
-hatch env create
+
+# Use full path if hatch is not in PATH
+HATCH_CMD="hatch"
+if ! command -v hatch &> /dev/null && [ -f "/root/.local/bin/hatch" ]; then
+    HATCH_CMD="/root/.local/bin/hatch"
+fi
+
+$HATCH_CMD env create
 
 # Get the Hatch Python executable path
-HATCH_PYTHON=$(hatch env find)
+HATCH_PYTHON=$($HATCH_CMD env find)
 if [ -z "$HATCH_PYTHON" ]; then
     echo "❌ Failed to locate Hatch environment"
     exit 1
 fi
 
 # Get the actual Python executable in the environment
-PYTHON_EXEC=$(hatch run python -c "import sys; print(sys.executable)")
+PYTHON_EXEC=$($HATCH_CMD run python -c "import sys; print(sys.executable)")
 echo "✓ Using Python: $PYTHON_EXEC"
 
 # Create systemd service
 echo "Creating systemd service..."
+
+# Determine the correct hatch path for the service
+HATCH_SERVICE_CMD="hatch"
+if ! command -v hatch &> /dev/null && [ -f "/root/.local/bin/hatch" ]; then
+    HATCH_SERVICE_CMD="/root/.local/bin/hatch"
+fi
+
 sudo tee /etc/systemd/system/usrp-mcp.service > /dev/null << EOF
 [Unit]
 Description=USRP B210 MCP Server
@@ -69,10 +95,10 @@ After=network.target
 Type=simple
 User=$USER
 WorkingDirectory=$PWD
-ExecStart=hatch run python usrp_mcp_server.py --tcp --port 8080
+ExecStart=$HATCH_SERVICE_CMD run python usrp_mcp_server.py --tcp --port 8080
 Restart=always
 RestartSec=10
-Environment=PATH=/usr/bin:/usr/local/bin
+Environment=PATH=/usr/bin:/usr/local/bin:/root/.local/bin
 
 [Install]
 WantedBy=multi-user.target
@@ -80,8 +106,8 @@ EOF
 
 echo "✓ Setup complete!"
 echo "Usage examples:"
-echo "  hatch run python usrp_mcp_server.py --tcp --port 8080"
-echo "  hatch run python usrp_mcp_server.py --tcp --host 192.168.1.10 --port 9090"
-echo "  hatch run python usrp_mcp_server.py --help"
-echo "To run in shell mode: hatch shell"
+echo "  $HATCH_CMD run python usrp_mcp_server.py --tcp --port 8080"
+echo "  $HATCH_CMD run python usrp_mcp_server.py --tcp --host 192.168.1.10 --port 9090"
+echo "  $HATCH_CMD run python usrp_mcp_server.py --help"
+echo "To run in shell mode: $HATCH_CMD shell"
 echo "To enable as service: sudo systemctl enable usrp-mcp && sudo systemctl start usrp-mcp"
