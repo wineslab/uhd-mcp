@@ -20,18 +20,24 @@ fi
 # Check if Hatch is installed
 echo "Checking Hatch installation..."
 
-# Ensure pipx path is set up
+# Ensure pipx path is set up and manually add to PATH
 pipx ensurepath
 
-# # Add pipx bin directory to PATH for this session (common in Docker environments)
-# export PATH="$HOME/.local/bin:/root/.local/bin:$PATH"
+# Manually add pipx bin directories to PATH (since we can't restart terminal in Docker)
+export PATH="$HOME/.local/bin:/root/.local/bin:$PATH"
+
+# Source shell configuration files if they exist to pick up any PATH changes
+[ -f ~/.bashrc ] && source ~/.bashrc 2>/dev/null || true
+[ -f ~/.profile ] && source ~/.profile 2>/dev/null || true
 
 if ! command -v hatch &> /dev/null; then
     echo "❌ Hatch not found. Installing Hatch..."
     pipx install hatch
-    # Update PATH again after installation
-    pipx ensurepath 
-    pipx install hatch 
+    
+    # After installation, update PATH again and try to source shell configs
+    export PATH="$HOME/.local/bin:/root/.local/bin:$PATH"
+    [ -f ~/.bashrc ] && source ~/.bashrc 2>/dev/null || true
+    [ -f ~/.profile ] && source ~/.profile 2>/dev/null || true
 fi
 
 # Verify hatch is available
