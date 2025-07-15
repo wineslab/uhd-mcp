@@ -8,7 +8,7 @@ echo "Setting up USRP FastMCP Server with Hatch..."
 echo "Checking Hatch installation..."
 
 # Ensure pipx path is set up and manually add to PATH
-pipx ensurepath
+pipx ensurepath --global
 
 # Manually add pipx bin directories to PATH (since we can't restart terminal in Docker)
 export PATH="$HOME/.local/bin:/root/.local/bin:$PATH"
