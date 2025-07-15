@@ -29,17 +29,17 @@ pipx ensurepath
 if ! command -v hatch &> /dev/null; then
     echo "❌ Hatch not found. Installing Hatch..."
     pipx install hatch
-    
     # Update PATH again after installation
-    export PATH="$HOME/.local/bin:/root/.local/bin:$PATH"
+    pipx ensurepath 
+    pipx install hatch 
 fi
 
 # Verify hatch is available
 if command -v hatch &> /dev/null; then
-    echo "✓ Hatch found at: $(which hatch)"
+    echo "✅ Hatch found at: $(which hatch)"
     hatch --version
 elif [ -f "/root/.local/bin/hatch" ]; then
-    echo "✓ Hatch found at: /root/.local/bin/hatch"
+    echo "✅ Hatch found at: /root/.local/bin/hatch"
     export PATH="/root/.local/bin:$PATH"
     /root/.local/bin/hatch --version
 else
@@ -50,11 +50,9 @@ fi
 # Test UHD installation
 echo "Testing UHD installation..."
 if command -v uhd_find_devices &> /dev/null; then
-    echo "✓ UHD tools found"
+    echo "✅ UHD tools found"
 else
     echo "❌ UHD tools not found. Please install UHD first."
-    echo "On Ubuntu/Debian: sudo apt install uhd-host"
-    echo "On other systems, see: https://files.ettus.com/manual/"
     exit 1
 fi
 
@@ -78,7 +76,7 @@ fi
 
 # Get the actual Python executable in the environment
 PYTHON_EXEC=$($HATCH_CMD run python -c "import sys; print(sys.executable)")
-echo "✓ Using Python: $PYTHON_EXEC"
+echo "✅ Using Python: $PYTHON_EXEC"
 
 # Create systemd service
 echo "Creating systemd service..."
@@ -108,12 +106,12 @@ WantedBy=multi-user.target
 EOF
 
 if [ $? -eq 0 ]; then
-    echo "✓ Systemd service created successfully"
+    echo "✅ Systemd service created successfully"
 else
     echo "⚠️  Failed to create systemd service (insufficient permissions)"
 fi
 
-echo "✓ Setup complete!"
+echo "✅ Setup complete!"
 echo "Usage examples:"
 echo "  $HATCH_CMD run python usrp_mcp_server.py --tcp --port 8080"
 echo "  $HATCH_CMD run python usrp_mcp_server.py --tcp --host 192.168.1.10 --port 9090"
