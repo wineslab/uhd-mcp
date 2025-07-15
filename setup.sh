@@ -20,28 +20,18 @@ fi
 # Check if Hatch is installed
 echo "Checking Hatch installation..."
 
-# Add pipx bin directory to PATH for this session (common in Docker environments)
-export PATH="$HOME/.local/bin:/root/.local/bin:$PATH"
+# Ensure pipx path is set up
+pipx ensurepath
+
+# # Add pipx bin directory to PATH for this session (common in Docker environments)
+# export PATH="$HOME/.local/bin:/root/.local/bin:$PATH"
 
 if ! command -v hatch &> /dev/null; then
     echo "❌ Hatch not found. Installing Hatch..."
-    if command -v pipx &> /dev/null; then
-        pipx install hatch
-    else
-        echo "Installing pipx first..."
-        python3 -m pip install --user pipx
-        python3 -m pipx ensurepath
-        export PATH="$HOME/.local/bin:$PATH"
-        pipx install hatch
-    fi
+    pipx install hatch
     
     # Update PATH again after installation
     export PATH="$HOME/.local/bin:/root/.local/bin:$PATH"
-    
-    # Source bashrc to update PATH if it exists
-    if [ -f ~/.bashrc ]; then
-        source ~/.bashrc 2>/dev/null || true
-    fi
 fi
 
 # Verify hatch is available
