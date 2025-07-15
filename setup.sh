@@ -31,10 +31,12 @@ fi
 if command -v hatch &> /dev/null; then
     echo "✅ Hatch found at: $(which hatch)"
     hatch --version
+    HATCH_SERVICE_CMD="hatch"
 elif [ -f "/root/.local/bin/hatch" ]; then
     echo "✅ Hatch found at: /root/.local/bin/hatch"
     export PATH="/root/.local/bin:$PATH"
     /root/.local/bin/hatch --version
+    HATCH_SERVICE_CMD="/root/.local/bin/hatch"
 else
     echo "❌ Failed to install Hatch. Please install manually: pip install hatch"
     exit 1
@@ -59,36 +61,8 @@ else
     echo "⚠️  Warning: Not running as root and sudo not available. Systemd service creation may fail."
 fi
 
-# Initialize Hatch environment and install dependencies
-echo "Setting up Hatch environment..."
-
-# Use full path if hatch is not in PATH
-HATCH_CMD="hatch"
-if ! command -v hatch &> /dev/null && [ -f "/root/.local/bin/hatch" ]; then
-    HATCH_CMD="/root/.local/bin/hatch"
-fi
-
-$HATCH_CMD env create
-
-# Get the Hatch Python executable path
-HATCH_PYTHON=$($HATCH_CMD env find)
-if [ -z "$HATCH_PYTHON" ]; then
-    echo "❌ Failed to locate Hatch environment"
-    exit 1
-fi
-
-# Get the actual Python executable in the environment
-PYTHON_EXEC=$($HATCH_CMD run python -c "import sys; print(sys.executable)")
-echo "✅ Using Python: $PYTHON_EXEC"
-
 # Create systemd service for production deployment
 echo "Creating systemd service..."
-
-# Determine the correct hatch path for the service
-HATCH_SERVICE_CMD="hatch"
-if ! command -v hatch &> /dev/null && [ -f "/root/.local/bin/hatch" ]; then
-    HATCH_SERVICE_CMD="/root/.local/bin/hatch"
-fi
 
 $SUDO tee /etc/systemd/system/usrp-mcp.service > /dev/null << EOF
 [Unit]
@@ -116,10 +90,11 @@ fi
 
 echo "✅ Setup complete!"
 echo "Usage examples:"
-echo "  $HATCH_CMD run python usrp_mcp_server.py --tcp --port 8080"
-echo "  $HATCH_CMD run python usrp_mcp_server.py --tcp --host 192.168.1.10 --port 9090"
-echo "  $HATCH_CMD run python usrp_mcp_server.py --help"
-echo "To run in shell mode: $HATCH_CMD shell"
+echo "  hatch run python usrp_mcp_server.py --tcp --port 8080"
+echo "  hatch run python usrp_mcp_server.py --tcp --host 192.168.1.10 --port 9090"
+echo "  hatch run python usrp_mcp_server.py --help"
+echo "To run in shell mode: hatch shell"
+echo "To start interactively: ./start.sh"
 
 # Only show systemd instructions if we successfully created the service
 if [ -f "/etc/systemd/system/usrp-mcp.service" ]; then
