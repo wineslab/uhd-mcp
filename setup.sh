@@ -5,7 +5,7 @@ set -x
 echo "Setting up USRP B210 FastMCP Server with Hatch..."
 
 # Set up SUDO variable based on environment
-if [ "$EUID" -eq 0 ]; then
+if [ "$(id -u)" -eq 0 ]; then
     # Running as root, no sudo needed
     SUDO=""
 elif command -v sudo &> /dev/null; then
