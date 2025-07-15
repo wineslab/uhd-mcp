@@ -7,24 +7,21 @@ echo "Setting up USRP FastMCP Server with Hatch..."
 # Check if Hatch is installed
 echo "Checking Hatch installation..."
 
-# Ensure pipx path is set up and manually add to PATH
-pipx ensurepath --global
-
-# Manually add pipx bin directories to PATH (since we can't restart terminal in Docker)
-export PATH="$HOME/.local/bin:/root/.local/bin:$PATH"
-
-# Source shell configuration files if they exist to pick up any PATH changes
-[ -f ~/.bashrc ] && source ~/.bashrc 2>/dev/null || true
-[ -f ~/.profile ] && source ~/.profile 2>/dev/null || true
-
+# Check if hatch is already available
 if ! command -v hatch &> /dev/null; then
-    echo "❌ Hatch not found. Installing Hatch..."
-    pipx install hatch
+    echo "❌ Hatch not found. Installing Hatch standalone binary..."
     
-    # After installation, update PATH again and try to source shell configs
-    export PATH="$HOME/.local/bin:/root/.local/bin:$PATH"
-    [ -f ~/.bashrc ] && source ~/.bashrc 2>/dev/null || true
-    [ -f ~/.profile ] && source ~/.profile 2>/dev/null || true
+    # Download and install Hatch standalone binary
+    curl --proto '=https' --tlsv1.2 -sSf https://github.com/pypa/hatch/releases/latest/download/hatch-x86_64-unknown-linux-gnu.tar.gz | tar -xzC /usr/local/bin/ hatch
+    
+    # Make it executable
+    chmod +x /usr/local/bin/hatch
+    
+    # Verify installation
+    if ! command -v hatch &> /dev/null; then
+        echo "❌ Failed to install Hatch standalone binary"
+        exit 1
+    fi
 fi
 
 # Verify hatch is available
@@ -32,13 +29,8 @@ if command -v hatch &> /dev/null; then
     echo "✅ Hatch found at: $(which hatch)"
     hatch --version
     HATCH_SERVICE_CMD="hatch"
-elif [ -f "/root/.local/bin/hatch" ]; then
-    echo "✅ Hatch found at: /root/.local/bin/hatch"
-    export PATH="/root/.local/bin:$PATH"
-    /root/.local/bin/hatch --version
-    HATCH_SERVICE_CMD="/root/.local/bin/hatch"
 else
-    echo "❌ Failed to install Hatch. Please install manually: pip install hatch"
+    echo "❌ Failed to install Hatch. Please install manually"
     exit 1
 fi
 
@@ -76,7 +68,7 @@ WorkingDirectory=$PWD
 ExecStart=$HATCH_SERVICE_CMD run python usrp_mcp_server.py --tcp --port 8080
 Restart=always
 RestartSec=10
-Environment=PATH=/usr/bin:/usr/local/bin:/root/.local/bin
+Environment=PATH=/usr/bin:/usr/local/bin
 
 [Install]
 WantedBy=multi-user.target
