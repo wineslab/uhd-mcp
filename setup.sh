@@ -1,5 +1,6 @@
 # setup_usrp.sh - Setup script for USRP B210 with Hatch
 #!/bin/bash
+set -x
 
 echo "Setting up USRP B210 FastMCP Server with Hatch..."
 
@@ -47,7 +48,6 @@ fi
 echo "Testing UHD installation..."
 if command -v uhd_find_devices &> /dev/null; then
     echo "✓ UHD tools found"
-    uhd_find_devices
 else
     echo "❌ UHD tools not found. Please install UHD first."
     echo "On Ubuntu/Debian: sudo apt install uhd-host"
