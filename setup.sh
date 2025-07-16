@@ -1,6 +1,6 @@
 # setup_usrp.sh - Setup script for USRP with Hatch
 #!/bin/bash
-set -x
+# set -x
 
 echo "Setting up USRP FastMCP Server with Hatch..."
 
