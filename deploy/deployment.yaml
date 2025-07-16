@@ -6,6 +6,11 @@ metadata:
   uid: f47c99c6-28a9-4457-a9c1-71d0da1003f2
   creationTimestamp: '2025-07-15T23:22:20Z'
   annotations:
+    cpu-load-balancing.crio.io: disable
+    cpu-quota.crio.io: disable
+    deployment.kubernetes.io/revision: '11'
+    irq-load-balancing.crio.io: disable
+    k8s.v1.cni.cncf.io/networks: worker-microway-radio-network-sriov-mcp
   managedFields:
     - manager: Mozilla
       operation: Update
