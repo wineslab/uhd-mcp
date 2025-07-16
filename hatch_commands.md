@@ -23,19 +23,19 @@ hatch env find
 
 ```bash
 # Run server in HTTP mode (default)
-hatch run python -m uhd_mcp.usrp_mcp_server
+hatch run python -m uhd_mcp
 
 # Run on specific port
-hatch run python -m uhd_mcp.usrp_mcp_server --port 9090
+hatch run python -m uhd_mcp --port 9090
 
 # Run on specific host and port
-hatch run python -m uhd_mcp.usrp_mcp_server --host 0.0.0.0 --port 8080
+hatch run python -m uhd_mcp --host 0.0.0.0 --port 8080
 
 # Show all command-line options
-hatch run python -m uhd_mcp.usrp_mcp_server --help
+hatch run python -m uhd_mcp --help
 
 # Run with environment variables
-hatch run --env PYTHONPATH=/custom/path python -m uhd_mcp.usrp_mcp_server --tcp
+hatch run --env PYTHONPATH=/custom/path python -m uhd_mcp --tcp
 
 # Enter shell for interactive development
 hatch shell

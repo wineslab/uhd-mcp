@@ -4,20 +4,20 @@
 
 ```bash
 # Start with Hatch in HTTP mode (default)
-hatch run python -m uhd_mcp.usrp_mcp_server
+hatch run python -m uhd_mcp
 
 # Start on specific port
-hatch run python -m uhd_mcp.usrp_mcp_server --port 9090
+hatch run python -m uhd_mcp --port 9090
 
 # Start on specific host and port
-hatch run python -m uhd_mcp.usrp_mcp_server --host 0.0.0.0 --port 8080
+hatch run python -m uhd_mcp --host 0.0.0.0 --port 8080
 
 # Or enter Hatch shell first
 hatch shell
-python -m uhd_mcp.usrp_mcp_server --port 8080
+python -m uhd_mcp --port 8080
 
 # Show help and all options
-hatch run python -m uhd_mcp.usrp_mcp_server --help
+hatch run python -m uhd_mcp --help
 ```
 
 ## Running Tests

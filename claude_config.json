@@ -1,10 +1,11 @@
 {
   "mcpServers": {
     "usrp": {
-      "command": "ssh",
+      "command": "npx",
       "args": [
-        "username@your-laptop-ip",
-        "cd /home/username/uhd-mcp && hatch run python -m uhd_mcp.usrp_mcp_server --port 8080"
+        "-y",
+        "@modelcontextprotocol/server-fetch",
+        "http://127.0.0.1:8080/mcp"
       ]
     }
   }

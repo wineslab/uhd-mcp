@@ -43,4 +43,4 @@ fi
 # Start the server using Hatch
 echo "Starting USRP MCP Server on HTTP 127.0.0.1:8080/mcp..."
 echo "Press Ctrl+C to stop the server"
-$HATCH_CMD run python -m uhd_mcp.usrp_mcp_server --port 8080
+$HATCH_CMD run python -m uhd_mcp --port 8080

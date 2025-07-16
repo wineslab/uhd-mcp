@@ -37,7 +37,7 @@ After=network.target
 Type=simple
 User=$USER
 WorkingDirectory=$WORK_DIR
-ExecStart=$HATCH_PATH run python -m uhd_mcp.usrp_mcp_server --port 8080
+ExecStart=$HATCH_PATH run python -m uhd_mcp --port 8080
 Restart=always
 RestartSec=10
 Environment=PATH=/usr/bin:/usr/local/bin:$HOME/.local/bin
