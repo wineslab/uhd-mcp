@@ -11,7 +11,7 @@ echo "Checking Hatch installation..."
 if ! command -v hatch &> /dev/null; then
     echo "❌ Hatch not found. Installing Hatch standalone binary..."
     mkdir -p /usr/local/bin/
-    curl --proto '=https' --tlsv1.2 -sSf https://github.com/pypa/hatch/releases/latest/download/hatch-x86_64-unknown-linux-gnu.tar.gz | tar -xzC /usr/local/bin/ hatch
+    wget -q -O - https://github.com/pypa/hatch/releases/latest/download/hatch-x86_64-unknown-linux-gnu.tar.gz | tar -xzC /usr/local/bin/ hatch
     chmod +x /usr/local/bin/hatch
     
     # Verify installation worked
