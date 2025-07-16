@@ -8,7 +8,7 @@ echo "Setting up USRP FastMCP Server with Hatch..."
 echo "Checking Hatch installation..."
 
 # Ensure pipx path is set up and manually add to PATH
-pipx ensurepath --global
+pipx ensurepath
 
 # Install Hatch if not available
 if ! command -v hatch &> /dev/null; then
