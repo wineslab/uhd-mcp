@@ -3,92 +3,12 @@ apiVersion: apps/v1
 metadata:
   name: uhd-mcp
   namespace: mcp-services
-  uid: f47c99c6-28a9-4457-a9c1-71d0da1003f2
-  creationTimestamp: '2025-07-15T23:22:20Z'
   annotations:
     cpu-load-balancing.crio.io: disable
     cpu-quota.crio.io: disable
     deployment.kubernetes.io/revision: '11'
     irq-load-balancing.crio.io: disable
     k8s.v1.cni.cncf.io/networks: worker-microway-radio-network-sriov-mcp
-  managedFields:
-    - manager: Mozilla
-      operation: Update
-      apiVersion: apps/v1
-      fieldsType: FieldsV1
-      fieldsV1:
-        'f:spec':
-          'f:progressDeadlineSeconds': {}
-          'f:revisionHistoryLimit': {}
-          'f:selector': {}
-          'f:strategy':
-            'f:rollingUpdate':
-              .: {}
-              'f:maxSurge': {}
-              'f:maxUnavailable': {}
-            'f:type': {}
-          'f:template':
-            'f:metadata':
-              'f:labels':
-                .: {}
-                'f:app': {}
-            'f:spec':
-              'f:containers':
-                'k:{"name":"container"}':
-                  'f:image': {}
-                  'f:terminationMessagePolicy': {}
-                  .: {}
-                  'f:resources': {}
-                  'f:command': {}
-                  'f:terminationMessagePath': {}
-                  'f:imagePullPolicy': {}
-                  'f:ports':
-                    .: {}
-                    'k:{"containerPort":8080,"protocol":"TCP"}':
-                      .: {}
-                      'f:containerPort': {}
-                      'f:protocol': {}
-                  'f:name': {}
-              'f:dnsPolicy': {}
-              'f:restartPolicy': {}
-              'f:schedulerName': {}
-              'f:securityContext':
-                .: {}
-                'f:fsGroup': {}
-                'f:runAsGroup': {}
-                'f:runAsUser': {}
-              'f:terminationGracePeriodSeconds': {}
-    - manager: kube-controller-manager
-      operation: Update
-      apiVersion: apps/v1
-      time: '2025-07-16T19:02:39Z'
-      fieldsType: FieldsV1
-      fieldsV1:
-        'f:metadata':
-          'f:annotations':
-            .: {}
-            'f:deployment.kubernetes.io/revision': {}
-        'f:status':
-          'f:conditions':
-            .: {}
-            'k:{"type":"Available"}':
-              .: {}
-              'f:lastTransitionTime': {}
-              'f:lastUpdateTime': {}
-              'f:message': {}
-              'f:reason': {}
-              'f:status': {}
-              'f:type': {}
-            'k:{"type":"Progressing"}':
-              .: {}
-              'f:lastTransitionTime': {}
-              'f:lastUpdateTime': {}
-              'f:message': {}
-              'f:reason': {}
-              'f:status': {}
-              'f:type': {}
-          'f:observedGeneration': {}
-      subresource: status
 spec:
   replicas: 0
   selector:
@@ -128,14 +48,3 @@ spec:
           terminationMessagePolicy: File
           imagePullPolicy: Always
       restartPolicy: Always
-      terminationGracePeriodSeconds: 30
-      dnsPolicy: ClusterFirst
-      schedulerName: default-scheduler
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxUnavailable: 25%
-      maxSurge: 25%
-  revisionHistoryLimit: 10
-  progressDeadlineSeconds: 600
-status:
