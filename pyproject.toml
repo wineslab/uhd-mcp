@@ -37,6 +37,9 @@ Source = "https://github.com/wineslab/uhd-mcp"
 path = "VERSION"
 pattern = "(?P<version>.*)"
 
+[tool.hatch.build.targets.wheel]
+packages = ["src/uhd_mcp"]
+
 [tool.hatch.envs.default]
 dependencies = [
   "fastmcp>=0.1.0",
@@ -59,7 +62,7 @@ format-check = "black --check --diff {args:.}"
 type-check = "mypy {args:src}"
 
 [project.scripts]
-usrp-mcp-server = "usrp_mcp_server:main"
+usrp-mcp-server = "uhd_mcp.usrp_mcp_server:main"
 
 [project.optional-dependencies]
 dev = [

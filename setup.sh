@@ -30,9 +30,10 @@ fi
 
 echo "✅ Setup complete!"
 echo "Usage examples:"
-echo "  hatch run python usrp_mcp_server.py --tcp --port 8080"
-echo "  hatch run python usrp_mcp_server.py --tcp --host 192.168.1.10 --port 9090"
-echo "  hatch run python usrp_mcp_server.py --help"
+echo "  hatch run python -m uhd_mcp.usrp_mcp_server --tcp --port 8080"
+echo "  hatch run python -m uhd_mcp.usrp_mcp_server --tcp --host 192.168.1.10 --port 9090"
+echo "  hatch run python -m uhd_mcp.usrp_mcp_server --help"
+echo "  hatch run usrp-mcp-server --tcp --port 8080  # Using console script"
 echo "To run in shell mode: hatch shell"
 echo "To start interactively: ./start.sh"
 echo "To install as system service: ./install-service.sh"
