@@ -358,7 +358,7 @@ def get_uhd_info() -> str:
         
         # Check UHD config
         result2 = subprocess.run(
-            ["uhd_config_info"],
+            ["uhd_config_info", "--print-all"],
             capture_output=True,
             text=True,
             timeout=10

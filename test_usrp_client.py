@@ -9,13 +9,47 @@ import aiohttp
 
 async def send_request(session, url, request):
     """Send HTTP request and get response"""
-    async with session.post(url, json=request) as response:
-        return await response.json()
+    headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json, text/event-stream'
+    }
+    async with session.post(url, json=request, headers=headers) as response:
+        if response.status != 200:
+            print(f"HTTP Error {response.status}: {response.reason}")
+            print(f"Response headers: {dict(response.headers)}")
+            response_text = await response.text()
+            print(f"Response body: {response_text}")
+            raise Exception(f"HTTP {response.status}: {response.reason}")
+        
+        content_type = response.headers.get('Content-Type', '')
+        if 'application/json' in content_type:
+            return await response.json()
+        elif 'text/event-stream' in content_type:
+            # Handle Server-Sent Events
+            response_text = await response.text()
+            print(f"SSE Response: {response_text}")
+            
+            # Parse SSE format - look for data: lines
+            lines = response_text.strip().split('\n')
+            for line in lines:
+                if line.startswith('data: '):
+                    try:
+                        return json.loads(line[6:])  # Remove 'data: ' prefix
+                    except json.JSONDecodeError:
+                        continue
+            
+            # If no valid JSON found, return the raw text
+            return {"error": "No valid JSON in SSE response", "raw": response_text}
+        else:
+            response_text = await response.text()
+            return {"error": f"Unexpected content type: {content_type}", "raw": response_text}
 
 async def test_usrp_server(url='https://uhd-mcp-route-mcp-services.apps.tenoran.automation.otic.open6g.net/mcp/'):
     """Test the USRP MCP server"""
     try:
         print(f"Connecting to USRP server at {url}...")
+        
+        session_id = None
         
         async with aiohttp.ClientSession() as session:
             # Initialize
@@ -30,9 +64,70 @@ async def test_usrp_server(url='https://uhd-mcp-route-mcp-services.apps.tenoran.
                 }
             }
             
-            response = await send_request(session, url, init_request)
+            # Send initial request and extract session ID
+            headers = {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json, text/event-stream'
+            }
+            async with session.post(url, json=init_request, headers=headers) as response:
+                session_id = response.headers.get('mcp-session-id')
+                print(f"Got session ID: {session_id}")
+                
+                content_type = response.headers.get('Content-Type', '')
+                if 'text/event-stream' in content_type:
+                    response_text = await response.text()
+                    lines = response_text.strip().split('\n')
+                    for line in lines:
+                        if line.startswith('data: '):
+                            init_response = json.loads(line[6:])
+                            break
+                else:
+                    init_response = await response.json()
+            
             print("✓ Connected to USRP MCP Server")
-            print(f"  Server capabilities: {response.get('result', {}).get('capabilities', {})}")
+            print(f"  Server response: {init_response}")
+            print(f"  Server capabilities: {init_response.get('result', {}).get('capabilities', {})}")
+            
+            # Send initialized notification to complete the handshake
+            initialized_notification = {
+                "jsonrpc": "2.0",
+                "method": "notifications/initialized"
+            }
+            
+            headers = {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json, text/event-stream',
+                'mcp-session-id': session_id
+            }
+            async with session.post(url, json=initialized_notification, headers=headers) as response:
+                if response.status == 200:
+                    print("✓ Initialization handshake completed")
+                else:
+                    print(f"Warning: Initialized notification returned {response.status}")
+            
+            # Helper function for subsequent requests with session ID
+            async def send_with_session(request_data):
+                headers = {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json, text/event-stream',
+                    'mcp-session-id': session_id
+                }
+                async with session.post(url, json=request_data, headers=headers) as response:
+                    if response.status != 200:
+                        print(f"HTTP Error {response.status}: {response.reason}")
+                        response_text = await response.text()
+                        print(f"Response body: {response_text}")
+                        raise Exception(f"HTTP {response.status}: {response.reason}")
+                    
+                    content_type = response.headers.get('Content-Type', '')
+                    if 'text/event-stream' in content_type:
+                        response_text = await response.text()
+                        lines = response_text.strip().split('\n')
+                        for line in lines:
+                            if line.startswith('data: '):
+                                return json.loads(line[6:])
+                    else:
+                        return await response.json()
             
             # List available tools
             tools_request = {
@@ -42,7 +137,8 @@ async def test_usrp_server(url='https://uhd-mcp-route-mcp-services.apps.tenoran.
                 "params": {}
             }
             
-            response = await send_request(session, url, tools_request)
+            response = await send_with_session(tools_request)
+            print(f"  Tools response: {response}")
             tools = response.get("result", {}).get("tools", [])
             print(f"✓ Available tools: {[tool['name'] for tool in tools]}")
             
@@ -57,7 +153,7 @@ async def test_usrp_server(url='https://uhd-mcp-route-mcp-services.apps.tenoran.
                 }
             }
             
-            response = await send_request(session, url, uhd_info_request)
+            response = await send_with_session(uhd_info_request)
             uhd_info = response.get("result", {}).get("content", [{}])[0].get("text", "")
             print("✓ UHD Info:")
             print(uhd_info)
@@ -73,7 +169,7 @@ async def test_usrp_server(url='https://uhd-mcp-route-mcp-services.apps.tenoran.
                 }
             }
             
-            response = await send_request(session, url, find_request)
+            response = await send_with_session(find_request)
             devices_result = response.get("result", {}).get("content", [{}])[0].get("text", "")
             print("✓ Device search completed:")
             print(devices_result)
@@ -91,7 +187,7 @@ async def test_usrp_server(url='https://uhd-mcp-route-mcp-services.apps.tenoran.
                 }
             }
             
-            response = await send_request(session, url, probe_request)
+            response = await send_with_session(probe_request)
             probe_result = response.get("result", {}).get("content", [{}])[0].get("text", "")
             print("✓ Device probe completed:")
             print(probe_result[:500] + "..." if len(probe_result) > 500 else probe_result)
@@ -116,7 +212,7 @@ async def test_usrp_server(url='https://uhd-mcp-route-mcp-services.apps.tenoran.
                 }
             }
             
-            response = await send_request(session, url, siggen_request)
+            response = await send_with_session(siggen_request)
             siggen_result = response.get("result", {}).get("content", [{}])[0].get("text", "")
             print("✓ Signal generation test:")
             print(siggen_result)
@@ -140,7 +236,7 @@ async def test_usrp_server(url='https://uhd-mcp-route-mcp-services.apps.tenoran.
                 }
             }
             
-            response = await send_request(session, url, bg_siggen_request)
+            response = await send_with_session(bg_siggen_request)
             bg_result = response.get("result", {}).get("content", [{}])[0].get("text", "")
             print("✓ Background signal generation started:")
             print(bg_result)
@@ -157,7 +253,7 @@ async def test_usrp_server(url='https://uhd-mcp-route-mcp-services.apps.tenoran.
                 }
             }
             
-            response = await send_request(session, url, list_request)
+            response = await send_with_session(list_request)
             processes_result = response.get("result", {}).get("content", [{}])[0].get("text", "")
             print("✓ Running processes:")
             print(processes_result)
@@ -176,7 +272,7 @@ async def test_usrp_server(url='https://uhd-mcp-route-mcp-services.apps.tenoran.
                 }
             }
             
-            response = await send_request(session, url, cleanup_request)
+            response = await send_with_session(cleanup_request)
             cleanup_result = response.get("result", {}).get("content", [{}])[0].get("text", "")
             print("✓ Cleanup completed:")
             print(cleanup_result)
@@ -199,7 +295,7 @@ async def test_usrp_server(url='https://uhd-mcp-route-mcp-services.apps.tenoran.
                 }
             }
             
-            response = await send_request(session, url, rx_request)
+            response = await send_with_session(rx_request)
             rx_result = response.get("result", {}).get("content", [{}])[0].get("text", "")
             print("✓ RX sample capture test:")
             print(rx_result)
