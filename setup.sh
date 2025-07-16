@@ -14,12 +14,6 @@ pipx ensurepath
 if ! command -v hatch &> /dev/null; then
     echo "❌ Hatch not found. Installing Hatch..."
     pipx install hatch
-    
-    # Verify installation worked
-    if ! command -v hatch &> /dev/null; then
-        echo "❌ Failed to install Hatch"
-        exit 1
-    fi
 fi
 
 echo "✅ Hatch found at: $(which hatch)"
