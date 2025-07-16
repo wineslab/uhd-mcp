@@ -7,22 +7,22 @@ echo "Setting up USRP FastMCP Server with Hatch..."
 # Check if Hatch is installed
 echo "Checking Hatch installation..."
 
+# Ensure pipx path is set up and manually add to PATH
+pipx ensurepath --global
+
 # Install Hatch if not available
 if ! command -v hatch &> /dev/null; then
-    echo "❌ Hatch not found. Installing Hatch standalone binary..."
-    mkdir -p /usr/local/bin/
-    wget -q -O - https://github.com/pypa/hatch/releases/latest/download/hatch-x86_64-unknown-linux-gnu.tar.gz | tar -xzC /usr/local/bin/ hatch
-    chmod +x /usr/local/bin/hatch
+    echo "❌ Hatch not found. Installing Hatch..."
+    pipx install hatch
     
     # Verify installation worked
     if ! command -v hatch &> /dev/null; then
-        echo "❌ Failed to install Hatch standalone binary"
+        echo "❌ Failed to install Hatch"
         exit 1
     fi
 fi
 
 echo "✅ Hatch found at: $(which hatch)"
-hatch --version
 HATCH_SERVICE_CMD="hatch"
 
 # Test UHD installation
