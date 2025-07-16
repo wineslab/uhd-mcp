@@ -3,14 +3,14 @@
 ## Starting the Server
 
 ```bash
-# Start with Hatch in HTTP mode (default)
+# Start with Hatch in HTTP mode (default - binds to all interfaces)
 hatch run python -m uhd_mcp
 
 # Start on specific port
 hatch run python -m uhd_mcp --port 9090
 
-# Start on specific host and port
-hatch run python -m uhd_mcp --host 0.0.0.0 --port 8080
+# Start on localhost only
+hatch run python -m uhd_mcp --host 127.0.0.1 --port 8080
 
 # Or enter Hatch shell first
 hatch shell

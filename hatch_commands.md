@@ -22,14 +22,14 @@ hatch env find
 ## Running the Server
 
 ```bash
-# Run server in HTTP mode (default)
+# Run server in HTTP mode (default - binds to all interfaces)
 hatch run python -m uhd_mcp
 
 # Run on specific port
 hatch run python -m uhd_mcp --port 9090
 
-# Run on specific host and port
-hatch run python -m uhd_mcp --host 0.0.0.0 --port 8080
+# Run on localhost only
+hatch run python -m uhd_mcp --host 127.0.0.1 --port 8080
 
 # Show all command-line options
 hatch run python -m uhd_mcp --help

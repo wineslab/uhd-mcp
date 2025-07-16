@@ -30,9 +30,9 @@ fi
 
 echo "✅ Setup complete!"
 echo "Usage examples:"
-echo "  hatch run python -m uhd_mcp                                    # Default HTTP on 127.0.0.1:8080"
+echo "  hatch run python -m uhd_mcp                                    # Default HTTP on 0.0.0.0:8080"
 echo "  hatch run python -m uhd_mcp --port 9090                       # HTTP on port 9090"
-echo "  hatch run python -m uhd_mcp --host 0.0.0.0                    # HTTP on all interfaces"
+echo "  hatch run python -m uhd_mcp --host 127.0.0.1                  # HTTP on localhost only"
 echo "  hatch run python -m uhd_mcp --help                            # Show all options"
 echo "  hatch run usrp-mcp-server --port 8080                         # Using console script"
 echo "To run in shell mode: hatch shell"
