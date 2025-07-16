@@ -4,13 +4,9 @@ metadata:
   name: uhd-mcp
   namespace: mcp-services
   annotations:
-    cpu-load-balancing.crio.io: disable
-    cpu-quota.crio.io: disable
-    deployment.kubernetes.io/revision: '11'
-    irq-load-balancing.crio.io: disable
-    k8s.v1.cni.cncf.io/networks: worker-microway-radio-network-sriov-mcp
+    deployment.kubernetes.io/revision: '18'
 spec:
-  replicas: 0
+  replicas: 1
   selector:
     matchLabels:
       app: uhd-mcp
@@ -19,32 +15,42 @@ spec:
       creationTimestamp: null
       labels:
         app: uhd-mcp
+      annotations:
+        cpu-load-balancing.crio.io: disable
+        cpu-quota.crio.io: disable
+        irq-load-balancing.crio.io: disable
+        k8s.v1.cni.cncf.io/networks: worker-microway-radio-network-sriov-mcp
     spec:
-      securityContext:
-        runAsUser: 1002220000
-        runAsGroup: 1002220000
-        fsGroup: 1002220000
-        runAsNonRoot: true
-        seccompProfile:
-          type: RuntimeDefault
       containers:
-        - name: container
-          image: 'image-registry.openshift-image-registry.svc:5000/deployment-pipeline/mcp-uhd:latest'
+        - resources:
+            limits:
+              openshift.io/sriovnet_connectx_6: '1'
+          terminationMessagePath: /dev/termination-log
+          name: container
           command:
             - ./start.sh
-          ports:
-            - containerPort: 8080
-              protocol: TCP
           securityContext:
-            allowPrivilegeEscalation: false
-            runAsNonRoot: true
             capabilities:
               drop:
                 - ALL
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
             seccompProfile:
               type: RuntimeDefault
-          resources: {}
-          terminationMessagePath: /dev/termination-log
-          terminationMessagePolicy: File
+          ports:
+            - containerPort: 8080
+              protocol: TCP
           imagePullPolicy: Always
+          terminationMessagePolicy: File
+          image: 'image-registry.openshift-image-registry.svc:5000/deployment-pipeline/mcp-uhd:latest'
       restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      dnsPolicy: ClusterFirst
+      securityContext:
+        runAsUser: 1002220000
+        runAsGroup: 1002220000
+        runAsNonRoot: true
+        fsGroup: 1002220000
+        seccompProfile:
+          type: RuntimeDefault
+      schedulerName: default-scheduler
