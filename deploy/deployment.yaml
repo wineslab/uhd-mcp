@@ -4,16 +4,12 @@ metadata:
   name: uhd-mcp
   namespace: mcp-services
   uid: f47c99c6-28a9-4457-a9c1-71d0da1003f2
-  resourceVersion: '1113235713'
-  generation: 31
   creationTimestamp: '2025-07-15T23:22:20Z'
   annotations:
-    deployment.kubernetes.io/revision: '8'
   managedFields:
     - manager: Mozilla
       operation: Update
       apiVersion: apps/v1
-      time: '2025-07-16T16:16:13Z'
       fieldsType: FieldsV1
       fieldsV1:
         'f:spec':
@@ -34,28 +30,33 @@ metadata:
             'f:spec':
               'f:containers':
                 'k:{"name":"container"}':
-                  .: {}
                   'f:image': {}
+                  'f:terminationMessagePolicy': {}
+                  .: {}
+                  'f:resources': {}
+                  'f:command': {}
+                  'f:terminationMessagePath': {}
                   'f:imagePullPolicy': {}
-                  'f:name': {}
                   'f:ports':
                     .: {}
                     'k:{"containerPort":8080,"protocol":"TCP"}':
                       .: {}
                       'f:containerPort': {}
                       'f:protocol': {}
-                  'f:resources': {}
-                  'f:terminationMessagePath': {}
-                  'f:terminationMessagePolicy': {}
+                  'f:name': {}
               'f:dnsPolicy': {}
               'f:restartPolicy': {}
               'f:schedulerName': {}
-              'f:securityContext': {}
+              'f:securityContext':
+                .: {}
+                'f:fsGroup': {}
+                'f:runAsGroup': {}
+                'f:runAsUser': {}
               'f:terminationGracePeriodSeconds': {}
     - manager: kube-controller-manager
       operation: Update
       apiVersion: apps/v1
-      time: '2025-07-16T18:53:39Z'
+      time: '2025-07-16T19:02:39Z'
       fieldsType: FieldsV1
       fieldsV1:
         'f:metadata':
@@ -84,7 +85,7 @@ metadata:
           'f:observedGeneration': {}
       subresource: status
 spec:
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app: uhd-mcp
@@ -95,16 +96,28 @@ spec:
         app: uhd-mcp
     spec:
       securityContext:
-        runAsUser: 1011
-        runAsGroup: 1011
-        fsGroup: 1011
+        runAsUser: 1002220000
+        runAsGroup: 1002220000
+        fsGroup: 1002220000
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: container
           image: 'image-registry.openshift-image-registry.svc:5000/deployment-pipeline/mcp-uhd:latest'
-          command: ["./start.sh"]
+          command:
+            - ./start.sh
           ports:
             - containerPort: 8080
               protocol: TCP
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
           resources: {}
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
@@ -121,17 +134,3 @@ spec:
   revisionHistoryLimit: 10
   progressDeadlineSeconds: 600
 status:
-  observedGeneration: 31
-  conditions:
-    - type: Progressing
-      status: 'True'
-      lastUpdateTime: '2025-07-16T18:49:06Z'
-      lastTransitionTime: '2025-07-15T23:22:20Z'
-      reason: NewReplicaSetAvailable
-      message: ReplicaSet "uhd-mcp-6d49d6c97f" has successfully progressed.
-    - type: Available
-      status: 'True'
-      lastUpdateTime: '2025-07-16T18:53:39Z'
-      lastTransitionTime: '2025-07-16T18:53:39Z'
-      reason: MinimumReplicasAvailable
-      message: Deployment has minimum availability.

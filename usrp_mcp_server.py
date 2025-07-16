@@ -380,6 +380,15 @@ def get_uhd_info() -> str:
     except Exception as e:
         return f"Error getting UHD info: {str(e)}"
 
+def cleanup_on_exit():
+    """Cleanup function for atexit"""
+    if running_processes:
+        for process_id in list(running_processes.keys()):
+            try:
+                stop_process(process_id)
+            except:
+                pass  # Ignore errors during cleanup
+
 def main():
     """Main entry point for the USRP MCP server"""
     import atexit
@@ -421,7 +430,7 @@ Examples:
     args = parser.parse_args()
     
     # Cleanup on exit
-    atexit.register(cleanup_all_processes)
+    atexit.register(cleanup_on_exit)
     
     # Start server based on mode
     if args.tcp:

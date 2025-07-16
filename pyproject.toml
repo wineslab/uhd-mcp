@@ -35,6 +35,7 @@ Source = "https://github.com/wineslab/uhd-mcp"
 
 [tool.hatch.version]
 path = "VERSION"
+pattern = "(?P<version>.*)"
 
 [tool.hatch.envs.default]
 dependencies = [
