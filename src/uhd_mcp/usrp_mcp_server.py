@@ -13,6 +13,8 @@ import threading
 import time
 import argparse
 
+from .utils import parse_uhd_find_devices_output
+
 # Create the MCP server
 mcp = FastMCP("USRP Control Server")
 
@@ -30,13 +32,27 @@ def uhd_find_devices() -> str:
             timeout=30
         )
         
-        return json.dumps({
-            "command": "uhd_find_devices",
-            "return_code": result.returncode,
-            "stdout": result.stdout,
-            "stderr": result.stderr,
-            "success": result.returncode == 0
-        }, indent=2)
+        # Parse the output into structured format
+        if result.returncode == 0 and result.stdout:
+            parsed_devices = parse_uhd_find_devices_output(result.stdout)
+            
+            return json.dumps({
+                "command": "uhd_find_devices",
+                "return_code": result.returncode,
+                "success": True,
+                "parsed_output": parsed_devices,
+                "raw_stdout": result.stdout,
+                "stderr": result.stderr
+            }, indent=2)
+        else:
+            return json.dumps({
+                "command": "uhd_find_devices",
+                "return_code": result.returncode,
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "success": result.returncode == 0,
+                "error": "No devices found or command failed"
+            }, indent=2)
         
     except subprocess.TimeoutExpired:
         return "Command timed out after 30 seconds"
