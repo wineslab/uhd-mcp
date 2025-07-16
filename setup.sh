@@ -28,43 +28,6 @@ else
     exit 1
 fi
 
-# Set up SUDO variable based on environment for systemd service creation
-if [ "$(id -u)" -eq 0 ]; then
-    SUDO=""
-elif command -v sudo &> /dev/null; then
-    SUDO="sudo"
-else
-    SUDO=""
-    echo "⚠️  Warning: Not running as root and sudo not available. Systemd service creation may fail."
-fi
-
-# Create systemd service for production deployment
-echo "Creating systemd service..."
-
-$SUDO tee /etc/systemd/system/usrp-mcp.service > /dev/null << EOF
-[Unit]
-Description=USRP MCP Server
-After=network.target
-
-[Service]
-Type=simple
-User=$USER
-WorkingDirectory=$PWD
-ExecStart=$HATCH_SERVICE_CMD run python usrp_mcp_server.py --tcp --port 8080
-Restart=always
-RestartSec=10
-Environment=PATH=/usr/bin:/usr/local/bin
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-if [ $? -eq 0 ]; then
-    echo "✅ Systemd service created successfully"
-else
-    echo "⚠️  Failed to create systemd service (insufficient permissions)"
-fi
-
 echo "✅ Setup complete!"
 echo "Usage examples:"
 echo "  hatch run python usrp_mcp_server.py --tcp --port 8080"
@@ -72,9 +35,5 @@ echo "  hatch run python usrp_mcp_server.py --tcp --host 192.168.1.10 --port 909
 echo "  hatch run python usrp_mcp_server.py --help"
 echo "To run in shell mode: hatch shell"
 echo "To start interactively: ./start.sh"
-
-# Only show systemd instructions if we successfully created the service
-if [ -f "/etc/systemd/system/usrp-mcp.service" ]; then
-    echo "To enable as service: ${SUDO} systemctl enable usrp-mcp && ${SUDO} systemctl start usrp-mcp"
-fi
+echo "To install as system service: ./install-service.sh"
 

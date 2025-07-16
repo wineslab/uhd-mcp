@@ -31,7 +31,7 @@ echo "✅ Using Python: $PYTHON_EXEC"
 echo "Checking for USRP devices..."
 if command -v uhd_find_devices &> /dev/null; then
     UHD_OUTPUT=$(uhd_find_devices 2>/dev/null)
-    if echo "$UHD_OUTPUT" | grep -q "type: b200"; then
+    if echo "$UHD_OUTPUT" | grep -q "Device Address"; then
         echo "✅ USRP detected!"
     else
         echo "⚠️  No USRP found. Starting server anyway (hardware may be connected later)."
