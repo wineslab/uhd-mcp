@@ -393,55 +393,42 @@ def main():
     """Main entry point for the USRP MCP server"""
     import atexit
     
-    # Setup argument parser
     parser = argparse.ArgumentParser(
         description="USRP FastMCP Server for Software Defined Radio control",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  %(prog)s                           # Start in stdio mode (for MCP clients)
-  %(prog)s --tcp                     # Start TCP server on default port 8080
-  %(prog)s --tcp --port 9090         # Start TCP server on port 9090
-  %(prog)s --tcp --host 192.168.1.10 --port 8080  # Start on specific host/port
-        """
+  %(prog)s                           # Start HTTP server on default port 8080
+  %(prog)s --port 9090               # Start HTTP server on port 9090
+  %(prog)s --host 192.168.1.10       # Start on specific host
+  %(prog)s --help                    # Show this help
+"""
     )
     
     parser.add_argument(
-        "--tcp", 
-        action="store_true",
-        help="Run in TCP mode instead of stdio mode"
-    )
-    
-    parser.add_argument(
-        "--port", 
-        type=int, 
+        "--port",
+        type=int,
         default=8080,
-        help="TCP port to listen on (default: 8080)"
+        help="Port to run the HTTP server on (default: 8080)"
     )
     
     parser.add_argument(
-        "--host", 
-        type=str, 
-        default="0.0.0.0",
-        help="Host/IP address to bind to (default: 0.0.0.0 - all interfaces)"
+        "--host",
+        type=str,
+        default="127.0.0.1",
+        help="Host to bind the server to (default: 127.0.0.1)"
     )
     
-    # Parse arguments
     args = parser.parse_args()
     
     # Cleanup on exit
     atexit.register(cleanup_on_exit)
     
-    # Start server based on mode
-    if args.tcp:
-        print(f"Starting USRP FastMCP server on TCP {args.host}:{args.port}")
-        print("Available tools: uhd_find_devices, uhd_usrp_probe, uhd_siggen, uhd_rx_samples_to_file")
-        print("Press Ctrl+C to stop the server")
-        mcp.run_tcp(port=args.port, host=args.host)
-    else:
-        print("Starting USRP FastMCP server in stdio mode")
-        print("This mode is for MCP clients. For testing, use --tcp flag.")
-        mcp.run()
+    # Start server with HTTP transport
+    print(f"Starting USRP FastMCP server on HTTP {args.host}:{args.port}/mcp")
+    print("Available tools: uhd_find_devices, uhd_usrp_probe, uhd_siggen, uhd_rx_samples_to_file")
+    print("Press Ctrl+C to stop the server")
+    mcp.run(transport="http", host=args.host, port=args.port, path="/mcp")
 
 if __name__ == "__main__":
     main()

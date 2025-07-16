@@ -22,17 +22,14 @@ hatch env find
 ## Running the Server
 
 ```bash
-# Run server in TCP mode (for testing)
-hatch run python -m uhd_mcp.usrp_mcp_server --tcp
+# Run server in HTTP mode (default)
+hatch run python -m uhd_mcp.usrp_mcp_server
 
 # Run on specific port
-hatch run python -m uhd_mcp.usrp_mcp_server --tcp --port 9090
+hatch run python -m uhd_mcp.usrp_mcp_server --port 9090
 
 # Run on specific host and port
-hatch run python -m uhd_mcp.usrp_mcp_server --tcp --host 192.168.1.10 --port 8080
-
-# Run in stdio mode (for MCP clients)
-hatch run python -m uhd_mcp.usrp_mcp_server
+hatch run python -m uhd_mcp.usrp_mcp_server --host 0.0.0.0 --port 8080
 
 # Show all command-line options
 hatch run python -m uhd_mcp.usrp_mcp_server --help

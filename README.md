@@ -33,7 +33,7 @@ A Model Context Protocol (MCP) server for controlling USRP software-defined radi
    Or manually:
 
    ```bash
-   hatch run python -m uhd_mcp.usrp_mcp_server --tcp --port 8080
+   hatch run python -m uhd_mcp.usrp_mcp_server --port 8080
    ```
 
 ## Development with Hatch
@@ -47,7 +47,7 @@ This project uses [Hatch](https://hatch.pypa.io/) for dependency management and 
 hatch shell
 
 # Run the server
-hatch run python -m uhd_mcp.usrp_mcp_server --tcp --port 8080
+hatch run python -m uhd_mcp.usrp_mcp_server --port 8080
 
 # Run tests
 hatch run python test_usrp_client.py

@@ -4,7 +4,7 @@
       "command": "ssh",
       "args": [
         "username@your-laptop-ip",
-        "cd /home/username/uhd-mcp && hatch run python -m uhd_mcp.usrp_mcp_server"
+        "cd /home/username/uhd-mcp && hatch run python -m uhd_mcp.usrp_mcp_server --port 8080"
       ]
     }
   }
