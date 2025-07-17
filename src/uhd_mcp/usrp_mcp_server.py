@@ -65,13 +65,47 @@ def uhd_find_devices() -> str:
 def uhd_usrp_probe(args: str = "") -> str:
     """Probe USRP device for detailed information"""
     try:
-        cmd = ["uhd_usrp_probe"] + args.split() if args else ["uhd_usrp_probe"]
+        cmd = ["uhd_usrp_probe"]
+        
+        # Parse arguments to handle command flags vs device args correctly
+        if args:
+            arg_parts = args.split()
+            command_flags = []
+            device_args = []
+            
+            # Separate command flags from device arguments
+            i = 0
+            while i < len(arg_parts):
+                if arg_parts[i].startswith("--") and arg_parts[i] != "--args":
+                    # This is a command flag (like --tree)
+                    command_flags.append(arg_parts[i])
+                elif arg_parts[i] == "--args":
+                    # Everything after --args should be device arguments
+                    i += 1
+                    if i < len(arg_parts):
+                        device_args.extend(arg_parts[i:])
+                    break
+                else:
+                    # If we encounter a non-flag argument, treat it as device args
+                    device_args.extend(arg_parts[i:])
+                    break
+                i += 1
+            
+            # Add command flags first
+            cmd.extend(command_flags)
+            
+            # Add device arguments with --args if there are any
+            if device_args:
+                cmd.append("--args")
+                cmd.append(" ".join(device_args))
+        
+        print(f"DEBUG: Running command: {' '.join(cmd)}")  # Debug output
         
         result = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
-            timeout=30
+            timeout=60  # Increased timeout for probe operations
         )
         
         return json.dumps({
@@ -83,7 +117,7 @@ def uhd_usrp_probe(args: str = "") -> str:
         }, indent=2)
         
     except subprocess.TimeoutExpired:
-        return "Command timed out after 30 seconds"
+        return "Command timed out after 60 seconds"
     except FileNotFoundError:
         return "Error: uhd_usrp_probe not found. Make sure UHD is installed and in PATH."
     except Exception as e:
