@@ -17,9 +17,10 @@ chmod +x dev-setup.sh
 
 ### 3. Package the Extension
 ```bash
-dxt pack .
+# From the project root directory (uhd-mcp/)
+dxt pack src/usrp_proxy_dxt/
 ```
-This creates a `.dxt` file that can be installed in Claude Desktop.
+This creates a `usrp_proxy_dxt.dxt` file that can be installed in Claude Desktop.
 
 ### 4. Install in Claude Desktop
 - Open Claude Desktop
@@ -162,8 +163,8 @@ curl -X POST https://your-server.com/mcp/ \
 ## Production Deployment
 
 ### For End Users
-1. Package the extension: `dxt pack .`
-2. Distribute the `.dxt` file
+1. Package the extension: `dxt pack src/usrp_proxy_dxt/` (from project root)
+2. Distribute the `usrp_proxy_dxt.dxt` file
 3. Provide installation instructions for Claude Desktop
 
 ### For Developers
