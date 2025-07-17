@@ -33,7 +33,7 @@ class USRPProxyServer {
     // Configuration from environment variables
     this.serverUrl = process.env.USRP_SERVER_URL || "https://uhd-mcp-route-mcp-services.apps.tenoran.automation.otic.open6g.net/mcp/";
     this.requestTimeout = parseInt(process.env.REQUEST_TIMEOUT || "60") * 1000; // Convert to milliseconds
-    this.debugMode = process.env.DEBUG_MODE === "true";
+    this.debugMode = process.env.DEBUG_MODE === "true"; // Disable debug by default in production
     this.sessionId = null;
 
     this.setupHandlers();
@@ -139,6 +139,7 @@ class USRPProxyServer {
   async initializeSession() {
     try {
       this.logDebug("Initializing MCP session...");
+      this.logDebug(`Target server URL: ${this.serverUrl}`);
 
       // Send initialize request
       const initRequest = {
@@ -152,10 +153,12 @@ class USRPProxyServer {
         },
       };
 
+      this.logDebug(`Sending init request: ${JSON.stringify(initRequest)}`);
       const initResponse = await this.sendMCPRequest(initRequest);
+      this.logDebug(`Init response: ${JSON.stringify(initResponse)}`);
 
       if (initResponse.error) {
-        throw new Error(`Initialize failed: ${initResponse.error.message}`);
+        throw new Error(`Initialize failed: ${JSON.stringify(initResponse.error)}`);
       }
 
       // Send initialized notification
@@ -164,10 +167,37 @@ class USRPProxyServer {
         method: "notifications/initialized",
       };
 
-      await this.sendMCPRequest(initializedNotification);
+      this.logDebug(`Sending initialized notification: ${JSON.stringify(initializedNotification)}`);
+      
+      // The initialized notification doesn't expect a response, so we handle it differently
+      try {
+        const response = await fetch(this.serverUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json, text/event-stream",
+            "mcp-session-id": this.sessionId,
+          },
+          body: JSON.stringify(initializedNotification),
+        });
+
+        // For notifications, we don't need to parse the response
+        if (response.ok) {
+          this.logDebug("Initialized notification sent successfully");
+        } else {
+          this.logDebug(`Initialized notification response: ${response.status} ${response.statusText}`);
+        }
+      } catch (error) {
+        this.logDebug(`Initialized notification error (non-fatal): ${error.message}`);
+        // Don't throw here - notifications are fire-and-forget
+      }
+      
       this.logDebug("MCP session initialized successfully");
+      
+      console.error("✅ Successfully connected to remote USRP server");
     } catch (error) {
       this.logError("Failed to initialize MCP session", error);
+      console.error("❌ Failed to connect to remote USRP server:", error.message);
       throw error;
     }
   }
@@ -179,6 +209,7 @@ class USRPProxyServer {
     try {
       // Ensure session is initialized
       if (!this.sessionId) {
+        this.logDebug("Session not initialized, attempting to initialize...");
         await this.initializeSession();
       }
 
@@ -210,7 +241,19 @@ class USRPProxyServer {
       return JSON.stringify(result || response);
     } catch (error) {
       this.logError(`Remote tool call failed for ${toolName}`, error);
-      throw error;
+      
+      // Return a structured error response instead of throwing
+      return JSON.stringify({
+        success: false,
+        error: error.message,
+        tool: toolName,
+        server_url: this.serverUrl,
+        timestamp: new Date().toISOString(),
+        debug_info: {
+          session_id: this.sessionId,
+          error_type: error.constructor.name
+        }
+      }, null, 2);
     }
   }
 
@@ -421,16 +464,46 @@ class USRPProxyServer {
 
       this.logDebug("USRP Proxy MCP server running on stdio");
       console.error("USRP Proxy MCP server started successfully");
+      
+      // Pre-initialize the session to test connectivity
+      try {
+        this.logDebug("Testing connection to remote server...");
+        await this.initializeSession();
+        this.logDebug("Successfully connected to remote server");
+      } catch (error) {
+        this.logError("Failed to connect to remote server during startup - will retry on first tool call", error);
+        // Don't exit, just log the error and continue
+        this.sessionId = null;
+      }
     } catch (error) {
       this.logError("Failed to start USRP Proxy MCP server", error);
+      console.error("STACK TRACE:", error.stack);
       process.exit(1);
     }
   }
 }
 
 // Start the proxy server
+console.error("🚀 Starting USRP MCP Proxy...");
+console.error(`📡 Target server: ${process.env.USRP_SERVER_URL || "https://uhd-mcp-route-mcp-services.apps.tenoran.automation.otic.open6g.net/mcp/"}`);
+console.error(`🐛 Debug mode: ${process.env.DEBUG_MODE === "true" ? "ON" : "OFF"}`);
+
+// Add process event handlers for better debugging
+process.on('uncaughtException', (error) => {
+  console.error('💥 Uncaught Exception:', error.message);
+  console.error('Stack trace:', error.stack);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('💥 Unhandled Rejection at:', promise);
+  console.error('Reason:', reason);
+  process.exit(1);
+});
+
 const proxyServer = new USRPProxyServer();
 proxyServer.run().catch((error) => {
-  console.error("Fatal error:", error);
+  console.error("💥 Fatal error during startup:", error.message);
+  console.error("Stack trace:", error.stack);
   process.exit(1);
 });
