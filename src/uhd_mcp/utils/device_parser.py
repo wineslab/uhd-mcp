@@ -89,3 +89,90 @@ def parse_uhd_find_devices_output(output: str) -> Dict[str, Any]:
         "products": products,
         "devices": devices
     }
+
+
+def parse_uhd_config_info_output(output: str) -> Dict[str, Any]:
+    """
+    Parse uhd_config_info --print-all output into structured JSON format
+    
+    Args:
+        output: Raw stdout from uhd_config_info --print-all command
+        
+    Returns:
+        Dictionary with parsed UHD configuration information
+    """
+    config = {}
+    
+    lines = output.strip().split('\n')
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+            
+        if ":" in line:
+            # Split on first colon only
+            key, value = line.split(":", 1)
+            key = key.strip()
+            value = value.strip()
+            
+            # Convert key to snake_case and remove spaces
+            key = key.lower().replace(" ", "_").replace("-", "_")
+            
+            # Handle specific value conversions
+            if key == "uhd" and "." in value:
+                # This is the version line like "UHD 4.3.0.0-0-g1f8fd345"
+                config["version"] = value
+            elif key == "build_date":
+                config["build_date"] = value
+            elif key == "c_compiler":
+                # Extract compiler name and version
+                if "GNU" in value:
+                    parts = value.split()
+                    config["c_compiler"] = {
+                        "name": "GNU GCC",
+                        "version": parts[-1] if parts else value
+                    }
+                else:
+                    config["c_compiler"] = {"name": value, "version": "unknown"}
+            elif key == "c++_compiler" or key == "cxx_compiler":
+                # Extract compiler name and version
+                if "GNU" in value:
+                    parts = value.split()
+                    config["cxx_compiler"] = {
+                        "name": "GNU G++",
+                        "version": parts[-1] if parts else value
+                    }
+                else:
+                    config["cxx_compiler"] = {"name": value, "version": "unknown"}
+            elif key == "enabled_components":
+                # Split comma-separated components
+                components = [comp.strip() for comp in value.split(",")]
+                config["enabled_components"] = components
+            elif key == "boost_version":
+                config["boost_version"] = value
+            elif key == "libusb_version":
+                config["libusb_version"] = value
+            elif key == "library_path":
+                config["library_path"] = value
+            elif key == "package_path":
+                config["package_path"] = value
+            elif key == "images_directory":
+                config["images_directory"] = value
+            elif key == "install_prefix":
+                config["install_prefix"] = value
+            elif key == "abi_version_string":
+                config["abi_version"] = value
+            elif "flags" in key:
+                # Parse compiler flags into list
+                flags = [flag.strip() for flag in value.split() if flag.strip()]
+                config[key] = flags
+            else:
+                # Default: store as-is
+                config[key] = value
+        else:
+            # Handle lines without colons (like the UHD version line)
+            if line.startswith("UHD ") and config.get("version") is None:
+                config["version"] = line
+    
+    return config

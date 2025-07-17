@@ -13,7 +13,7 @@ import threading
 import time
 import argparse
 
-from .utils import parse_uhd_find_devices_output
+from .utils import parse_uhd_find_devices_output, parse_uhd_config_info_output
 
 # Create the MCP server
 mcp = FastMCP("USRP Control Server")
@@ -394,39 +394,40 @@ def cleanup_all_processes() -> str:
 
 @mcp.tool()
 def get_uhd_info() -> str:
-    """Get UHD installation and version information"""
+    """Get UHD installation and configuration information"""
     try:
-        # Check UHD version
+        # Get comprehensive UHD config info with --print-all
         result = subprocess.run(
-            ["uhd_config_info", "--version"],
-            capture_output=True,
-            text=True,
-            timeout=10
-        )
-        
-        version_info = result.stdout if result.returncode == 0 else "Version not available"
-        
-        # Check UHD config
-        result2 = subprocess.run(
             ["uhd_config_info", "--print-all"],
             capture_output=True,
             text=True,
             timeout=10
         )
         
-        config_info = result2.stdout if result2.returncode == 0 else "Config not available"
+        # Build base response structure
+        response = {
+            "command": "uhd_config_info --print-all",
+            "return_code": result.returncode,
+            "success": result.returncode == 0,
+            "raw_stdout": result.stdout,
+            "stderr": result.stderr
+        }
         
-        return json.dumps({
-            "uhd_version": version_info.strip(),
-            "uhd_config": config_info,
-            "uhd_tools_available": True
-        }, indent=2)
+        # Add parsed output if successful and has output
+        if result.returncode == 0 and result.stdout:
+            response["parsed_output"] = parse_uhd_config_info_output(result.stdout)
+        else:
+            response["error"] = "Failed to get UHD configuration information"
+        
+        return json.dumps(response, indent=2)
         
     except FileNotFoundError:
         return json.dumps({
             "error": "UHD tools not found in PATH",
             "uhd_tools_available": False
         }, indent=2)
+    except subprocess.TimeoutExpired:
+        return "Command timed out after 10 seconds"
     except Exception as e:
         return f"Error getting UHD info: {str(e)}"
 
