@@ -1,0 +1,95 @@
+{
+  "dxt_version": "0.1",
+  "name": "usrp-proxy",
+  "display_name": "USRP MCP Proxy",
+  "version": "1.0.0",
+  "description": "Local MCP proxy for remote USRP MCP server with software-defined radio capabilities",
+  "long_description": "This extension provides a local MCP proxy that connects to a remote USRP MCP server, enabling Claude Desktop to control software-defined radio equipment via UHD tools. It includes device discovery, signal generation, data capture, and comprehensive radio hardware management through a clean MCP interface.",
+  "author": {
+    "name": "UHD MCP Developer",
+    "email": "developer@example.com"
+  },
+  "homepage": "https://github.com/wineslab/uhd-mcp",
+  "documentation": "https://github.com/wineslab/uhd-mcp/blob/main/README.md",
+  "support": "https://github.com/wineslab/uhd-mcp/issues",
+  "keywords": ["sdr", "usrp", "radio", "uhd", "mcp", "proxy", "wireless"],
+  "license": "MIT",
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/server/index.js"],
+      "env": {
+        "USRP_SERVER_URL": "${user_config.server_url}",
+        "REQUEST_TIMEOUT": "${user_config.request_timeout}",
+        "DEBUG_MODE": "${user_config.debug_mode}"
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "uhd_find_devices",
+      "description": "Find all connected UHD devices with structured JSON output"
+    },
+    {
+      "name": "uhd_usrp_probe",
+      "description": "Probe USRP device for detailed hardware information"
+    },
+    {
+      "name": "uhd_siggen",
+      "description": "Generate signals on USRP with configurable parameters"
+    },
+    {
+      "name": "uhd_rx_samples_to_file",
+      "description": "Capture RF samples from USRP to file"
+    },
+    {
+      "name": "get_uhd_info",
+      "description": "Get UHD installation and configuration information"
+    },
+    {
+      "name": "stop_process",
+      "description": "Stop a running UHD background process"
+    },
+    {
+      "name": "list_processes",
+      "description": "List all running UHD background processes"
+    },
+    {
+      "name": "cleanup_all_processes",
+      "description": "Stop all running UHD background processes"
+    }
+  ],
+  "tools_generated": false,
+  "compatibility": {
+    "claude_desktop": ">=1.0.0",
+    "platforms": ["darwin", "win32", "linux"],
+    "runtimes": {
+      "node": ">=16.0.0"
+    }
+  },
+  "user_config": {
+    "server_url": {
+      "type": "string",
+      "title": "USRP Server URL",
+      "description": "URL of the remote USRP MCP server (e.g., https://your-server.com/mcp/)",
+      "required": true,
+      "default": "https://uhd-mcp-route-mcp-services.apps.tenoran.automation.otic.open6g.net/mcp/"
+    },
+    "request_timeout": {
+      "type": "number",
+      "title": "Request Timeout (seconds)",
+      "description": "Maximum time to wait for server responses",
+      "default": 60,
+      "min": 10,
+      "max": 300
+    },
+    "debug_mode": {
+      "type": "boolean",
+      "title": "Debug Mode",
+      "description": "Enable verbose logging for troubleshooting",
+      "default": false
+    }
+  }
+}

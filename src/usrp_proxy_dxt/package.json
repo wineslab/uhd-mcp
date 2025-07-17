@@ -1,0 +1,32 @@
+{
+  "name": "usrp-proxy-dxt",
+  "version": "1.0.0",
+  "description": "USRP MCP Proxy Desktop Extension",
+  "main": "server/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "DEBUG_MODE=true node server/index.js",
+    "test": "node test.js",
+    "setup": "./dev-setup.sh",
+    "validate": "node -e \"console.log('✅ Manifest valid:', JSON.parse(require('fs').readFileSync('manifest.json', 'utf8')).name)\"",
+    "pack": "dxt pack .",
+    "clean": "rm -rf node_modules package-lock.json"
+  },
+  "keywords": [
+    "mcp",
+    "usrp",
+    "sdr",
+    "proxy",
+    "dxt"
+  ],
+  "author": "UHD MCP Developer",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.16.0",
+    "node-fetch": "^3.3.2"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

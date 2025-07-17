@@ -4,7 +4,6 @@
 import asyncio
 import json
 import sys
-import time
 import aiohttp
 
 async def send_request(session, url, request):
