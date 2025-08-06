@@ -13,6 +13,8 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
+  ListPromptsRequestSchema,
+  ListResourcesRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import fetch from "node-fetch";
 
@@ -26,6 +28,8 @@ class USRPProxyServer {
       {
         capabilities: {
           tools: {},
+          prompts: {},
+          resources: {},
         },
       }
     );
@@ -484,6 +488,24 @@ class USRPProxyServer {
             },
           },
         ],
+      };
+    });
+
+    // Handle prompts listing
+    this.server.setRequestHandler(ListPromptsRequestSchema, async () => {
+      this.logDebug("Listing available prompts");
+      
+      return {
+        prompts: [], // No prompts supported by this proxy
+      };
+    });
+
+    // Handle resources listing
+    this.server.setRequestHandler(ListResourcesRequestSchema, async () => {
+      this.logDebug("Listing available resources");
+      
+      return {
+        resources: [], // No resources supported by this proxy
       };
     });
 
