@@ -2,6 +2,7 @@
   "dxt_version": "0.1",
   "name": "usrp-proxy",
   "display_name": "USRP MCP Proxy",
+  "icon": "icon.png",
   "version": "1.0.0",
   "description": "Local MCP proxy for remote USRP MCP server with software-defined radio capabilities",
   "long_description": "This extension provides a local MCP proxy that connects to a remote USRP MCP server, enabling Claude Desktop to control software-defined radio equipment via UHD tools. It includes device discovery, signal generation, data capture, and comprehensive radio hardware management through a clean MCP interface.",
@@ -73,7 +74,7 @@
     "server_url": {
       "type": "string",
       "title": "USRP Server URL",
-      "description": "URL of the remote USRP MCP server (e.g., https://your-server.com/mcp/)",
+      "description": "URL of the remote USRP MCP server (e.g., https://uhd-mcp-route-mcp-services.apps.tenoran.automation.otic.open6g.net/mcp/)",
       "required": true,
       "default": "https://uhd-mcp-route-mcp-services.apps.tenoran.automation.otic.open6g.net/mcp/"
     },

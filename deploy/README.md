@@ -1,0 +1,1 @@
+Dockerfile location is at https://github.com/wineslab/openshift-dockerfiles/blob/main/dockerfiles/mcp-services/Dockerfile-uhd-mcp

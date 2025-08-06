@@ -126,41 +126,142 @@ def uhd_usrp_probe(args: str = "") -> str:
 @mcp.tool()
 def uhd_siggen(
     freq: float,
-    rate: float = 1e6,
-    gain: float = 10,
-    wave_type: str = "SINE",
-    wave_freq: float = 1000,
-    amplitude: float = 0.3,
+    # USRP Arguments
+    device_args: Optional[str] = None,
+    spec: Optional[str] = None,
+    antenna: Optional[str] = None,
+    samp_rate: Optional[float] = None,
+    gain: Optional[float] = None,
+    power: Optional[float] = None,
+    lo_offset: Optional[float] = None,
+    channels: Optional[str] = None,
+    lo_export: Optional[str] = None,
+    lo_source: Optional[str] = None,
+    otw_format: Optional[str] = None,
+    stream_args: Optional[str] = None,
+    verbose: bool = False,
+    show_async_msg: bool = False,
+    sync: Optional[str] = None,
+    clock_source: Optional[str] = None,
+    time_source: Optional[str] = None,
+    # Siggen Arguments
+    amplitude: Optional[float] = None,
+    waveform_freq: Optional[float] = None,
+    waveform2_freq: Optional[float] = None,
+    waveform_type: str = "sine",  # sine, const, gaussian, uniform, 2tone, sweep
+    offset: Optional[float] = None,
+    # Control arguments
     duration: Optional[float] = None,
-    args: str = ""
+    additional_args: Optional[str] = None
 ) -> str:
     """
     Run uhd_siggen to generate signals on USRP
     
-    Args:
-        freq: RF center frequency in Hz (e.g., 2.4e9 for 2.4 GHz)
-        rate: Sample rate in Hz (default: 1e6)
-        gain: TX gain in dB (default: 10)
-        wave_type: Waveform type - CONST, SINE, RAMP, SQUARE (default: SINE)
-        wave_freq: Waveform frequency in Hz (default: 1000)
-        amplitude: Signal amplitude 0-1 (default: 0.3)
+    USRP Arguments:
+        freq: RF center frequency in Hz (required, e.g., 2.4e9 for 2.4 GHz)
+        device_args: UHD device address args
+        spec: Subdevice(s) specification
+        antenna: Select Tx antenna(s)
+        samp_rate: Sample rate in Hz
+        gain: TX gain in dB (conflicts with power)
+        power: Reference power level in dBm (conflicts with gain)
+        lo_offset: Daughterboard LO offset
+        channels: Select Tx channels
+        lo_export: TwinRX LO export settings
+        lo_source: TwinRX LO source settings
+        otw_format: Over-the-wire data format (sc16, sc12, sc8)
+        stream_args: Additional stream arguments
+        verbose: Use verbose console output
+        show_async_msg: Show asynchronous message notifications
+        sync: Synchronization mode (default, pps, auto)
+        clock_source: Clock source (internal, external, gpsdo)
+        time_source: Time source
+    
+    Siggen Arguments:
+        amplitude: Output amplitude 0.0-1.0
+        waveform_freq: Baseband waveform frequency in Hz
+        waveform2_freq: Second waveform frequency in Hz (for 2tone)
+        waveform_type: Waveform type (sine, const, gaussian, uniform, 2tone, sweep)
+        offset: Waveform phase offset
+    
+    Control:
         duration: Duration in seconds (None for continuous)
-        args: Additional arguments as string
+        additional_args: Any additional command-line arguments as string
     """
     try:
-        cmd = [
-            "uhd_siggen", 
-            "--freq", str(freq),
-            "--rate", str(rate),
-            "--gain", str(gain),
-            "--wave-type", wave_type,
-            "--wave-freq", str(wave_freq),
-            "--ampl", str(amplitude)
-        ]
+        cmd = ["uhd_siggen"]
         
-        # Add additional arguments
-        if args:
-            cmd.extend(args.split())
+        # Required frequency argument
+        cmd.extend(["--freq", str(freq)])
+        
+        # USRP Arguments
+        if device_args:
+            cmd.extend(["--args", device_args])
+        if spec:
+            cmd.extend(["--spec", spec])
+        if antenna:
+            cmd.extend(["--antenna", antenna])
+        if samp_rate is not None:
+            cmd.extend(["--samp-rate", str(samp_rate)])
+        if gain is not None:
+            cmd.extend(["--gain", str(gain)])
+        if power is not None:
+            cmd.extend(["--power", str(power)])
+        if lo_offset is not None:
+            cmd.extend(["--lo-offset", str(lo_offset)])
+        if channels:
+            cmd.extend(["--channels", channels])
+        if lo_export:
+            cmd.extend(["--lo-export", lo_export])
+        if lo_source:
+            cmd.extend(["--lo-source", lo_source])
+        if otw_format:
+            cmd.extend(["--otw-format", otw_format])
+        if stream_args:
+            cmd.extend(["--stream-args", stream_args])
+        if verbose:
+            cmd.append("--verbose")
+        if show_async_msg:
+            cmd.append("--show-async-msg")
+        if sync:
+            cmd.extend(["--sync", sync])
+        if clock_source:
+            cmd.extend(["--clock-source", clock_source])
+        if time_source:
+            cmd.extend(["--time-source", time_source])
+            
+        # Siggen Arguments
+        if amplitude is not None:
+            cmd.extend(["--amplitude", str(amplitude)])
+        if waveform_freq is not None:
+            cmd.extend(["--waveform-freq", str(waveform_freq)])
+        if waveform2_freq is not None:
+            cmd.extend(["--waveform2-freq", str(waveform2_freq)])
+        if offset is not None:
+            cmd.extend(["--offset", str(offset)])
+            
+        # Waveform type selection (mutually exclusive)
+        if waveform_type.lower() == "sine":
+            cmd.append("--sine")
+        elif waveform_type.lower() == "const":
+            cmd.append("--const")
+        elif waveform_type.lower() == "gaussian":
+            cmd.append("--gaussian")
+        elif waveform_type.lower() == "uniform":
+            cmd.append("--uniform")
+        elif waveform_type.lower() == "2tone":
+            cmd.append("--2tone")
+        elif waveform_type.lower() == "sweep":
+            cmd.append("--sweep")
+        else:
+            return json.dumps({
+                "error": f"Invalid waveform_type '{waveform_type}'. Must be one of: sine, const, gaussian, uniform, 2tone, sweep",
+                "success": False
+            }, indent=2)
+        
+        # Add any additional arguments
+        if additional_args:
+            cmd.extend(additional_args.split())
             
         # Generate a process ID
         process_id = f"siggen_{int(time.time())}"

@@ -288,48 +288,119 @@ class USRPProxyServer {
           },
           {
             name: "uhd_siggen",
-            description: "Generate signals on USRP with configurable parameters",
+            description: "Generate signals on USRP with full parameter support - all UHD siggen capabilities",
             inputSchema: {
               type: "object",
               properties: {
+                // Required
                 freq: {
                   type: "number",
-                  description: "RF center frequency in Hz (e.g., 2.4e9 for 2.4 GHz)",
+                  description: "RF center frequency in Hz (required, e.g., 2.4e9 for 2.4 GHz)",
                 },
-                rate: {
+                // USRP Arguments
+                device_args: {
+                  type: "string",
+                  description: "UHD device address args",
+                },
+                spec: {
+                  type: "string",
+                  description: "Subdevice(s) specification",
+                },
+                antenna: {
+                  type: "string",
+                  description: "Select Tx antenna(s)",
+                },
+                samp_rate: {
                   type: "number",
                   description: "Sample rate in Hz",
-                  default: 1e6,
                 },
                 gain: {
                   type: "number",
-                  description: "TX gain in dB",
-                  default: 10,
+                  description: "TX gain in dB (conflicts with power)",
                 },
-                wave_type: {
-                  type: "string",
-                  description: "Waveform type",
-                  enum: ["CONST", "SINE", "RAMP", "SQUARE"],
-                  default: "SINE",
-                },
-                wave_freq: {
+                power: {
                   type: "number",
-                  description: "Waveform frequency in Hz",
-                  default: 1000,
+                  description: "Reference power level in dBm (conflicts with gain)",
                 },
+                lo_offset: {
+                  type: "number",
+                  description: "Daughterboard LO offset",
+                },
+                channels: {
+                  type: "string",
+                  description: "Select Tx channels",
+                },
+                lo_export: {
+                  type: "string",
+                  description: "TwinRX LO export settings",
+                },
+                lo_source: {
+                  type: "string",
+                  description: "TwinRX LO source settings",
+                },
+                otw_format: {
+                  type: "string",
+                  description: "Over-the-wire data format",
+                  enum: ["sc16", "sc12", "sc8"],
+                },
+                stream_args: {
+                  type: "string",
+                  description: "Additional stream arguments",
+                },
+                verbose: {
+                  type: "boolean",
+                  description: "Use verbose console output",
+                  default: false,
+                },
+                show_async_msg: {
+                  type: "boolean",
+                  description: "Show asynchronous message notifications",
+                  default: false,
+                },
+                sync: {
+                  type: "string",
+                  description: "Synchronization mode",
+                  enum: ["default", "pps", "auto"],
+                },
+                clock_source: {
+                  type: "string",
+                  description: "Clock source (internal, external, gpsdo)",
+                },
+                time_source: {
+                  type: "string",
+                  description: "Time source",
+                },
+                // Siggen Arguments
                 amplitude: {
                   type: "number",
-                  description: "Signal amplitude 0-1",
-                  default: 0.3,
+                  description: "Output amplitude 0.0-1.0",
                 },
+                waveform_freq: {
+                  type: "number",
+                  description: "Baseband waveform frequency in Hz",
+                },
+                waveform2_freq: {
+                  type: "number",
+                  description: "Second waveform frequency in Hz (for 2tone)",
+                },
+                waveform_type: {
+                  type: "string",
+                  description: "Waveform type",
+                  enum: ["sine", "const", "gaussian", "uniform", "2tone", "sweep"],
+                  default: "sine",
+                },
+                offset: {
+                  type: "number",
+                  description: "Waveform phase offset",
+                },
+                // Control
                 duration: {
                   type: "number",
                   description: "Duration in seconds (omit for continuous)",
                 },
-                args: {
+                additional_args: {
                   type: "string",
-                  description: "Additional arguments as string",
-                  default: "",
+                  description: "Any additional command-line arguments",
                 },
               },
               required: ["freq"],
