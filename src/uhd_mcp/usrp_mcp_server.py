@@ -151,7 +151,7 @@ def uhd_siggen(
     waveform_type: str = "sine",  # sine, const, gaussian, uniform, 2tone, sweep
     offset: Optional[float] = None,
     # Control arguments
-    duration: Optional[float] = None,
+    duration: Optional[float] = 10.0,  # Default 10 seconds
     additional_args: Optional[str] = None
 ) -> str:
     """
@@ -185,8 +185,11 @@ def uhd_siggen(
         offset: Waveform phase offset
     
     Control:
-        duration: Duration in seconds (None for continuous)
+        duration: Duration in seconds (default: 10.0, set to None for continuous) - implemented by running process for specified time
         additional_args: Any additional command-line arguments as string
+    
+    Note: uhd_siggen runs continuously by default. Duration is implemented by starting the process
+    and terminating it after the specified time, not via a UHD parameter.
     """
     try:
         cmd = ["uhd_siggen"]
@@ -266,64 +269,75 @@ def uhd_siggen(
         # Generate a process ID
         process_id = f"siggen_{int(time.time())}"
         
-        if duration:
-            # Run for specified duration
-            result = subprocess.run(
-                cmd + ["--duration", str(duration)],
-                capture_output=True,
-                text=True,
-                timeout=max(60, duration + 10)
-            )
+        # Start the process
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            stdin=subprocess.PIPE,
+            text=True
+        )
+        
+        # Store in running processes for management
+        running_processes[process_id] = {
+            "process": process,
+            "command": " ".join(cmd),
+            "start_time": time.time(),
+            "duration": duration
+        }
+        
+        # Set up automatic stopping for timed execution
+        if duration is not None:
+            def stop_after_duration():
+                time.sleep(duration)
+                if process_id in running_processes and process.poll() is None:
+                    # Send newline to stop uhd_siggen gracefully
+                    try:
+                        process.stdin.write('\n')
+                        process.stdin.flush()
+                    except:
+                        # If stdin fails, terminate normally
+                        process.terminate()
+            
+            # Start timer thread
+            timer_thread = threading.Thread(target=stop_after_duration, daemon=True)
+            timer_thread.start()
+        
+        # Always return immediately with appropriate message
+        time.sleep(0.5)  # Brief pause to check if process started successfully
+        
+        if process.poll() is None:
+            # Process is running
+            if duration is None:
+                message = f"Signal generation started continuously. Use stop_process('{process_id}') to stop."
+            else:
+                message = f"Signal generation started for {duration} seconds. Will stop automatically or use stop_process('{process_id}') to stop early."
             
             return json.dumps({
                 "process_id": process_id,
-                "command": " ".join(cmd + ["--duration", str(duration)]),
-                "return_code": result.returncode,
-                "stdout": result.stdout,
-                "stderr": result.stderr,
-                "success": result.returncode == 0,
+                "command": " ".join(cmd),
+                "status": "running",
+                "pid": process.pid,
+                "success": True,
                 "duration": duration,
-                "completed": True
+                "message": message
             }, indent=2)
         else:
-            # Run continuously in background
-            process = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True
-            )
+            # Process terminated immediately
+            stdout, stderr = process.communicate()
+            if process_id in running_processes:
+                del running_processes[process_id]
             
-            running_processes[process_id] = {
-                "process": process,
+            return json.dumps({
+                "process_id": process_id,
                 "command": " ".join(cmd),
-                "start_time": time.time()
-            }
-            
-            # Give it a moment to start
-            time.sleep(1)
-            
-            if process.poll() is None:
-                return json.dumps({
-                    "process_id": process_id,
-                    "command": " ".join(cmd),
-                    "status": "running",
-                    "pid": process.pid,
-                    "success": True,
-                    "message": f"Signal generation started. Use stop_process('{process_id}') to stop."
-                }, indent=2)
-            else:
-                # Process terminated immediately
-                stdout, stderr = process.communicate()
-                return json.dumps({
-                    "process_id": process_id,
-                    "command": " ".join(cmd),
-                    "return_code": process.returncode,
-                    "stdout": stdout,
-                    "stderr": stderr,
-                    "success": False,
-                    "message": "Process terminated immediately"
-                }, indent=2)
+                "return_code": process.returncode,
+                "stdout": stdout,
+                "stderr": stderr,
+                "success": False,
+                "duration": duration,
+                "message": f"Process terminated immediately (intended duration: {duration} seconds)"
+            }, indent=2)
                 
     except subprocess.TimeoutExpired:
         return "Command timed out"
@@ -343,19 +357,24 @@ def stop_process(process_id: str) -> str:
         process = process_info["process"]
         
         if process.poll() is None:
-            # Process is still running
-            process.terminate()
-            
-            # Wait a bit for graceful termination
+            # Process is still running - try graceful stop first (press enter)
             try:
-                process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                # Force kill if needed
-                process.kill()
-                process.wait()
+                process.stdin.write('\n')
+                process.stdin.flush()
+                process.wait(timeout=3)  # Wait up to 3 seconds for graceful stop
+            except:
+                # If stdin fails or timeout, use terminate
+                process.terminate()
+                try:
+                    process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    # Force kill if needed
+                    process.kill()
+                    process.wait()
             
             stdout, stderr = process.communicate()
             runtime = time.time() - process_info["start_time"]
+            duration = process_info.get("duration", "continuous")
             
             del running_processes[process_id]
             
@@ -364,6 +383,7 @@ def stop_process(process_id: str) -> str:
                 "command": process_info["command"],
                 "status": "stopped",
                 "runtime_seconds": round(runtime, 2),
+                "duration": duration,
                 "stdout": stdout,
                 "stderr": stderr,
                 "success": True
@@ -372,6 +392,7 @@ def stop_process(process_id: str) -> str:
             # Process already terminated
             stdout, stderr = process.communicate()
             runtime = time.time() - process_info["start_time"]
+            duration = process_info.get("duration", "continuous")
             
             del running_processes[process_id]
             
@@ -381,6 +402,7 @@ def stop_process(process_id: str) -> str:
                 "status": "already_terminated",
                 "return_code": process.returncode,
                 "runtime_seconds": round(runtime, 2),
+                "duration": duration,
                 "stdout": stdout,
                 "stderr": stderr,
                 "success": True
@@ -404,12 +426,14 @@ def list_processes() -> str:
         if process.poll() is None:
             # Still running
             runtime = current_time - info["start_time"]
+            duration = info.get("duration", "continuous")
             processes_info.append({
                 "process_id": process_id,
                 "command": info["command"],
                 "status": "running",
                 "pid": process.pid,
-                "runtime_seconds": round(runtime, 2)
+                "runtime_seconds": round(runtime, 2),
+                "duration": duration
             })
         else:
             # Process terminated, clean up
@@ -578,7 +602,8 @@ Examples:
     
     # Start server with HTTP transport
     print(f"Starting USRP FastMCP server on HTTP {args.host}:{args.port}/mcp")
-    print("Available tools: uhd_find_devices, uhd_usrp_probe, uhd_siggen, uhd_rx_samples_to_file")
+    print("Available tools: uhd_find_devices, uhd_usrp_probe, uhd_siggen (enhanced), uhd_rx_samples_to_file")
+    print("uhd_siggen now supports immediate response and proper 'enter to stop' handling")
     print("Press Ctrl+C to stop the server")
     mcp.run(transport="http", host=args.host, port=args.port, path="/mcp")
 
