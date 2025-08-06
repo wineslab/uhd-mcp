@@ -400,7 +400,7 @@ class USRPProxyServer {
                 // Control
                 duration: {
                   type: "number",
-                  description: "Duration in seconds (omit for continuous)",
+                  description: "Duration in seconds (default: 10.0, set to null for continuous)",
                 },
                 additional_args: {
                   type: "string",
