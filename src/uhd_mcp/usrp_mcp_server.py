@@ -6,7 +6,6 @@ FastMCP Server for USRP Control via UHD
 from fastmcp import FastMCP
 import subprocess
 import json
-import signal
 import os
 from typing import Optional, Dict, Any
 import threading
@@ -419,6 +418,7 @@ def list_processes() -> str:
     
     processes_info = []
     current_time = time.time()
+    terminated_ids = []
     
     for process_id, info in list(running_processes.items()):
         process = info["process"]
@@ -436,54 +436,137 @@ def list_processes() -> str:
                 "duration": duration
             })
         else:
-            # Process terminated, clean up
-            del running_processes[process_id]
+            # Process terminated, add to clean up list
+            terminated_ids.append(process_id)
     
+    for process_id in terminated_ids:
+        del running_processes[process_id]    
+
     return json.dumps(processes_info, indent=2)
 
 @mcp.tool()
-def uhd_rx_samples_to_file(
+def uhd_rx_cfile(
     freq: float,
-    rate: float = 1e6,
-    gain: float = 10,
-    duration: float = 1.0,
     filename: str = "samples.dat",
-    args: str = ""
+    # UHD Arguments
+    device_args: Optional[str] = None,
+    spec: Optional[str] = None,
+    antenna: Optional[str] = None,
+    samp_rate: float = 1e6,
+    gain: Optional[float] = None,
+    lo_offset: Optional[float] = None,
+    wire_format: str = "sc16",
+    scalar: int = 1024,
+    # Capture Arguments
+    output_shorts: bool = False,
+    nsamples: Optional[float] = None,
+    verbose: bool = False,
+    show_async_msg: bool = False,
+    additional_args: Optional[str] = None
 ) -> str:
     """
-    Capture samples from USRP to file
+    Capture I/Q samples from USRP to complex file using uhd_rx_cfile
     
     Args:
-        freq: RF center frequency in Hz
-        rate: Sample rate in Hz (default: 1e6)
-        gain: RX gain in dB (default: 10)
-        duration: Capture duration in seconds (default: 1.0)
+        freq: RF center frequency in Hz (required)
         filename: Output filename (default: samples.dat)
-        args: Additional arguments
+        device_args: UHD device address args
+        spec: Subdevice of UHD device where appropriate
+        antenna: Select Rx antenna where appropriate
+        samp_rate: Sample rate (bandwidth) in Hz (default: 1e6)
+        gain: RX gain in dB (default: midpoint)
+        lo_offset: Daughterboard LO offset
+        wire_format: Wire format from USRP (default: sc16)
+        scalar: Scalar multiplier value for sc8 wire format (default: 1024)
+        output_shorts: Output interleaved shorts instead of complex floats
+        nsamples: Number of samples to collect (None for infinite)
+        verbose: Verbose output
+        show_async_msg: Show asynchronous message notifications
+        additional_args: Additional command-line arguments
     """
     try:
-        cmd = [
-            "uhd_rx_samples_to_file",
-            "--freq", str(freq),
-            "--rate", str(rate),
-            "--gain", str(gain),
-            "--duration", str(duration),
-            "--file", filename
-        ]
+        cmd = ["uhd_rx_cfile"]
         
-        if args:
-            cmd.extend(args.split())
+        # Required frequency argument
+        cmd.extend(["-f", str(freq)])
+        
+        # UHD Arguments
+        if device_args:
+            cmd.extend(["-a", device_args])
+        if spec:
+            cmd.extend(["--spec", spec])
+        if antenna:
+            cmd.extend(["-A", antenna])
+        
+        # Sample rate
+        cmd.extend(["--samp-rate", str(samp_rate)])
+        
+        # Gain (if specified)
+        if gain is not None:
+            cmd.extend(["-g", str(gain)])
+        
+        # LO offset
+        if lo_offset is not None:
+            cmd.extend(["--lo-offset", str(lo_offset)])
+        
+        # Wire format
+        cmd.extend(["--wire-format", wire_format])
+        
+        # Scalar for sc8 format
+        cmd.extend(["--scalar", str(scalar)])
+        
+        # Output format
+        if output_shorts:
+            cmd.append("-s")
+        
+        # Number of samples
+        if nsamples is not None:
+            cmd.extend(["-N", str(nsamples)])
+        
+        # Verbose output
+        if verbose:
+            cmd.append("-v")
+        
+        # Async messages
+        if show_async_msg:
+            cmd.append("--show-async-msg")
+        
+        # Additional arguments
+        if additional_args:
+            cmd.extend(additional_args.split())
+        
+        # Output filename (must be last)
+        cmd.append(filename)
+        
+        # Calculate expected duration for timeout
+        if nsamples is not None:
+            duration = nsamples / samp_rate
+            timeout = max(60, duration + 30)
+        else:
+            # For infinite capture, use a reasonable timeout
+            timeout = 300  # 5 minutes max
         
         result = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
-            timeout=max(60, duration + 30)
+            timeout=timeout
         )
         
-        # Check if file was created
+        # Check if file was created and get its size
         file_created = os.path.exists(filename)
         file_size = os.path.getsize(filename) if file_created else 0
+        
+        # Calculate number of samples captured based on file size
+        if file_created:
+            if output_shorts:
+                # 16-bit complex shorts (4 bytes per sample)
+                samples_captured = file_size // 4
+            else:
+                # 32-bit complex floats (8 bytes per sample)
+                samples_captured = file_size // 8
+        else:
+            samples_captured = 0
         
         return json.dumps({
             "command": " ".join(cmd),
@@ -491,17 +574,38 @@ def uhd_rx_samples_to_file(
             "stdout": result.stdout,
             "stderr": result.stderr,
             "success": result.returncode == 0,
+            "capture_info": {
+                "freq": freq,
+                "samp_rate": samp_rate,
+                "gain": gain,
+                "samples_requested": nsamples,
+                "samples_captured": samples_captured,
+                "duration_seconds": samples_captured / samp_rate if samples_captured > 0 else 0,
+                "output_format": "16-bit shorts" if output_shorts else "32-bit complex floats"
+            },
             "output_file": filename,
             "file_created": file_created,
             "file_size_bytes": file_size
         }, indent=2)
         
     except subprocess.TimeoutExpired:
-        return "Command timed out"
+        return json.dumps({
+            "success": False,
+            "error": "Command timed out",
+            "message": f"uhd_rx_cfile timed out after {timeout} seconds"
+        }, indent=2)
     except FileNotFoundError:
-        return "Error: uhd_rx_samples_to_file not found. Make sure UHD is installed."
+        return json.dumps({
+            "success": False,
+            "error": "uhd_rx_cfile not found. Make sure GNU Radio and UHD are installed.",
+            "command": "uhd_rx_cfile"
+        }, indent=2)
     except Exception as e:
-        return f"Error: {str(e)}"
+        return json.dumps({
+            "success": False,
+            "error": str(e),
+            "command": "uhd_rx_cfile"
+        }, indent=2)
 
 @mcp.tool()
 def cleanup_all_processes() -> str:
@@ -602,8 +706,7 @@ Examples:
     
     # Start server with HTTP transport
     print(f"Starting USRP FastMCP server on HTTP {args.host}:{args.port}/mcp")
-    print("Available tools: uhd_find_devices, uhd_usrp_probe, uhd_siggen (enhanced), uhd_rx_samples_to_file")
-    print("uhd_siggen now supports immediate response and proper 'enter to stop' handling")
+    print("Available tools: uhd_find_devices, uhd_usrp_probe, uhd_siggen, uhd_rx_cfile")
     print("Press Ctrl+C to stop the server")
     mcp.run(transport="http", host=args.host, port=args.port, path="/mcp")
 

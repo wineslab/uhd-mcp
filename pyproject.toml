@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "uhd-mcp"
 dynamic = ["version"]
-description = 'An MCP for UHD'
+description = 'An MCP service for USRPs'
 readme = "README.md"
 requires-python = ">=3.8"
 license = "MIT"

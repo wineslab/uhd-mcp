@@ -411,39 +411,80 @@ class USRPProxyServer {
             },
           },
           {
-            name: "uhd_rx_samples_to_file",
-            description: "Capture RF samples from USRP to file",
+            name: "uhd_rx_cfile",
+            description: "Capture I/Q samples from USRP to complex file using GNU Radio uhd_rx_cfile",
             inputSchema: {
               type: "object",
               properties: {
                 freq: {
                   type: "number",
-                  description: "RF center frequency in Hz",
-                },
-                rate: {
-                  type: "number",
-                  description: "Sample rate in Hz",
-                  default: 1e6,
-                },
-                gain: {
-                  type: "number",
-                  description: "RX gain in dB",
-                  default: 10,
-                },
-                duration: {
-                  type: "number",
-                  description: "Capture duration in seconds",
-                  default: 1.0,
+                  description: "RF center frequency in Hz (required)",
                 },
                 filename: {
                   type: "string",
                   description: "Output filename",
                   default: "samples.dat",
                 },
-                args: {
+                // UHD Arguments
+                device_args: {
                   type: "string",
-                  description: "Additional arguments",
-                  default: "",
+                  description: "UHD device address args",
+                },
+                spec: {
+                  type: "string",
+                  description: "Subdevice of UHD device where appropriate",
+                },
+                antenna: {
+                  type: "string",
+                  description: "Select Rx antenna where appropriate",
+                },
+                samp_rate: {
+                  type: "number",
+                  description: "Sample rate (bandwidth) in Hz",
+                  default: 1e6,
+                },
+                gain: {
+                  type: "number",
+                  description: "RX gain in dB (default: midpoint)",
+                },
+                lo_offset: {
+                  type: "number",
+                  description: "Daughterboard LO offset",
+                },
+                wire_format: {
+                  type: "string",
+                  description: "Wire format from USRP",
+                  enum: ["sc16", "sc8", "fc32"],
+                  default: "sc16",
+                },
+                scalar: {
+                  type: "number",
+                  description: "Scalar multiplier value for sc8 wire format",
+                  default: 1024,
+                },
+                // Capture Arguments
+                output_shorts: {
+                  type: "boolean",
+                  description: "Output interleaved shorts instead of complex floats",
+                  default: false,
+                },
+                nsamples: {
+                  type: "number",
+                  description: "Number of samples to collect (omit for infinite)",
+                },
+                verbose: {
+                  type: "boolean",
+                  description: "Verbose output",
+                  default: false,
+                },
+                show_async_msg: {
+                  type: "boolean",
+                  description: "Show asynchronous message notifications",
+                  default: false,
+                },
+                additional_args: {
+                  type: "string",
+                  description: "Additional command-line arguments",
                 },
               },
               required: ["freq"],
