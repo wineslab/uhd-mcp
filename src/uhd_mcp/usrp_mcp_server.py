@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
-FastMCP Server for USRP Control via UHD
+FastMCP Server for USRP Control via UHD and GNU Radio
 """
 
 from fastmcp import FastMCP
 import subprocess
 import json
 import os
+import logging
 from typing import Optional, Dict, Any
 import threading
 import time
@@ -23,7 +24,9 @@ running_processes = {}
 @mcp.tool()
 def uhd_find_devices() -> str:
     """Find all connected UHD devices"""
+    logger = logging.getLogger(__name__)
     try:
+        logger.debug("Running uhd_find_devices")
         result = subprocess.run(
             ["uhd_find_devices"],
             capture_output=True,
@@ -34,6 +37,7 @@ def uhd_find_devices() -> str:
         # Parse the output into structured format
         if result.returncode == 0 and result.stdout:
             parsed_devices = parse_uhd_find_devices_output(result.stdout)
+            logger.info(f"Found {len(parsed_devices) if parsed_devices else 0} UHD devices")
             
             return json.dumps({
                 "command": "uhd_find_devices",
@@ -44,6 +48,7 @@ def uhd_find_devices() -> str:
                 "stderr": result.stderr
             }, indent=2)
         else:
+            logger.warning("uhd_find_devices failed or returned no output")
             return json.dumps({
                 "command": "uhd_find_devices",
                 "return_code": result.returncode,
@@ -63,7 +68,9 @@ def uhd_find_devices() -> str:
 @mcp.tool()
 def uhd_usrp_probe(args: str = "") -> str:
     """Probe USRP device for detailed information"""
+    logger = logging.getLogger(__name__)
     try:
+        logger.debug(f"Running uhd_usrp_probe with args: {args}")
         cmd = ["uhd_usrp_probe"]
         
         # Parse arguments to handle command flags vs device args correctly
@@ -98,7 +105,7 @@ def uhd_usrp_probe(args: str = "") -> str:
                 cmd.append("--args")
                 cmd.append(" ".join(device_args))
         
-        print(f"DEBUG: Running command: {' '.join(cmd)}")  # Debug output
+        logging.debug(f"Running command: {' '.join(cmd)}")
         
         result = subprocess.run(
             cmd,
@@ -191,6 +198,7 @@ def uhd_siggen(
     and terminating it after the specified time, not via a UHD parameter.
     """
     try:
+        logger = logging.getLogger(__name__)
         cmd = ["uhd_siggen"]
         
         # Required frequency argument
@@ -268,6 +276,8 @@ def uhd_siggen(
         # Generate a process ID
         process_id = f"siggen_{int(time.time())}"
         
+        logger.info(f"Starting uhd_siggen process {process_id} with command: {' '.join(cmd)}")
+        
         # Start the process
         process = subprocess.Popen(
             cmd,
@@ -309,8 +319,10 @@ def uhd_siggen(
             # Process is running
             if duration is None:
                 message = f"Signal generation started continuously. Use stop_process('{process_id}') to stop."
+                logger.info(f"Process {process_id} started continuously")
             else:
                 message = f"Signal generation started for {duration} seconds. Will stop automatically or use stop_process('{process_id}') to stop early."
+                logger.info(f"Process {process_id} started for {duration} seconds")
             
             return json.dumps({
                 "process_id": process_id,
@@ -323,6 +335,7 @@ def uhd_siggen(
             }, indent=2)
         else:
             # Process terminated immediately
+            logger.warning(f"Process {process_id} terminated immediately")
             stdout, stderr = process.communicate()
             if process_id in running_processes:
                 del running_processes[process_id]
@@ -348,7 +361,10 @@ def uhd_siggen(
 @mcp.tool()
 def stop_process(process_id: str) -> str:
     """Stop a running UHD process"""
+    logger = logging.getLogger(__name__)
+    
     if process_id not in running_processes:
+        logger.warning(f"Attempt to stop unknown process: {process_id}")
         return f"Process ID '{process_id}' not found. Use list_processes() to see running processes."
     
     try:
@@ -357,17 +373,20 @@ def stop_process(process_id: str) -> str:
         
         if process.poll() is None:
             # Process is still running - try graceful stop first (press enter)
+            logger.info(f"Stopping running process {process_id} gracefully")
             try:
                 process.stdin.write('\n')
                 process.stdin.flush()
                 process.wait(timeout=3)  # Wait up to 3 seconds for graceful stop
             except:
                 # If stdin fails or timeout, use terminate
+                logger.warning(f"Graceful stop failed for {process_id}, using terminate")
                 process.terminate()
                 try:
                     process.wait(timeout=5)
                 except subprocess.TimeoutExpired:
                     # Force kill if needed
+                    logger.warning(f"Process {process_id} required force kill")
                     process.kill()
                     process.wait()
             
@@ -376,6 +395,8 @@ def stop_process(process_id: str) -> str:
             duration = process_info.get("duration", "continuous")
             
             del running_processes[process_id]
+            
+            logger.info(f"Process {process_id} stopped successfully after {round(runtime, 2)} seconds")
             
             return json.dumps({
                 "process_id": process_id,
@@ -389,6 +410,7 @@ def stop_process(process_id: str) -> str:
             }, indent=2)
         else:
             # Process already terminated
+            logger.info(f"Process {process_id} was already terminated")
             stdout, stderr = process.communicate()
             runtime = time.time() - process_info["start_time"]
             duration = process_info.get("duration", "continuous")
@@ -485,6 +507,7 @@ def uhd_rx_cfile(
         additional_args: Additional command-line arguments
     """
     try:
+        logger = logging.getLogger(__name__)
         cmd = ["uhd_rx_cfile"]
         
         # Required frequency argument
@@ -542,9 +565,13 @@ def uhd_rx_cfile(
         if nsamples is not None:
             duration = nsamples / samp_rate
             timeout = max(60, duration + 30)
+            logger.info(f"Starting uhd_rx_cfile: {nsamples} samples at {samp_rate} Hz (estimated {duration:.2f}s)")
         else:
             # For infinite capture, use a reasonable timeout
             timeout = 300  # 5 minutes max
+            logger.info(f"Starting uhd_rx_cfile: infinite capture (max {timeout}s timeout)")
+        
+        logger.debug(f"Running command: {' '.join(cmd)}")
         
         result = subprocess.run(
             cmd,
@@ -565,8 +592,11 @@ def uhd_rx_cfile(
             else:
                 # 32-bit complex floats (8 bytes per sample)
                 samples_captured = file_size // 8
+            
+            logger.info(f"Capture completed: {samples_captured} samples captured, file size: {file_size} bytes")
         else:
             samples_captured = 0
+            logger.warning("No output file created during capture")
         
         return json.dumps({
             "command": " ".join(cmd),
@@ -662,12 +692,18 @@ def get_uhd_info() -> str:
 
 def cleanup_on_exit():
     """Cleanup function for atexit"""
+    logger = logging.getLogger(__name__)
     if running_processes:
+        logger.info(f"Cleaning up {len(running_processes)} running processes on exit")
         for process_id in list(running_processes.keys()):
             try:
                 stop_process(process_id)
+                logger.debug(f"Cleaned up process {process_id}")
             except:
+                logger.error(f"Failed to cleanup process {process_id}")
                 pass  # Ignore errors during cleanup
+    else:
+        logger.debug("No processes to cleanup on exit")
 
 def main():
     """Main entry point for the USRP MCP server"""
@@ -699,16 +735,40 @@ Examples:
         help="Host to bind the server to (default: 0.0.0.0)"
     )
     
+    parser.add_argument(
+        "--log-level",
+        type=str,
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Set logging level (default: INFO)"
+    )
+    
     args = parser.parse_args()
+    
+    # Configure logging
+    logging.basicConfig(
+        level=getattr(logging, args.log_level),
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    
+    logger = logging.getLogger(__name__)
     
     # Cleanup on exit
     atexit.register(cleanup_on_exit)
     
     # Start server with HTTP transport
-    print(f"Starting USRP FastMCP server on HTTP {args.host}:{args.port}/mcp")
-    print("Available tools: uhd_find_devices, uhd_usrp_probe, uhd_siggen, uhd_rx_cfile")
-    print("Press Ctrl+C to stop the server")
-    mcp.run(transport="http", host=args.host, port=args.port, path="/mcp")
+    logger.info(f"Starting USRP FastMCP server on HTTP {args.host}:{args.port}/mcp")
+    logger.info("Available tools: uhd_find_devices, uhd_usrp_probe, uhd_siggen, uhd_rx_cfile")
+    logger.info("Press Ctrl+C to stop the server")
+    
+    try:
+        mcp.run(transport="http", host=args.host, port=args.port, path="/mcp")
+    except KeyboardInterrupt:
+        logger.info("Server shutdown requested by user")
+    except Exception as e:
+        logger.error(f"Server error: {e}")
+        raise
 
 if __name__ == "__main__":
     main()
