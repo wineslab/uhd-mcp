@@ -469,7 +469,6 @@ def list_processes() -> str:
 @mcp.tool()
 def uhd_rx_cfile(
     freq: float,
-    filename: str = "samples.dat",
     # Core UHD parameters from manpage
     args: Optional[str] = None,  # UHD device address args
     spec: Optional[str] = None,  # Subdevice specification  
@@ -488,7 +487,6 @@ def uhd_rx_cfile(
     
     Based on official manpage parameters:
         freq: RF center frequency in Hz (required)
-        filename: Output filename (default: samples.dat)
         args: UHD device address args (e.g., "addr=192.168.10.2")
         spec: Subdevice of UHD device where appropriate
         antenna: Select Rx antenna where appropriate
@@ -499,9 +497,17 @@ def uhd_rx_cfile(
         nsamples: Number of samples to collect (default: infinite)
         verbose: Verbose output
         additional_args: Additional command-line arguments
+        
+    Returns filename of captured data file for use with download_file tool.
     """
     try:
         logger = logging.getLogger(__name__)
+        
+        # Generate unique filename with timestamp
+        timestamp = int(time.time())
+        extension = ".cfile" if not output_shorts else ".sfile"
+        filename = f"uhd_rx_{timestamp}_{int(freq/1e6)}MHz{extension}"
+        
         cmd = ["uhd_rx_cfile"]
         
         # Required frequency argument
@@ -553,11 +559,11 @@ def uhd_rx_cfile(
         if nsamples is not None:
             duration = nsamples / samp_rate
             timeout = max(60, duration + 30)
-            logger.info(f"Starting uhd_rx_cfile: {nsamples} samples at {samp_rate} Hz (estimated {duration:.2f}s)")
+            logger.info(f"Starting uhd_rx_cfile: {nsamples} samples at {freq} with sampling rate {samp_rate} Hz (estimated {duration:.2f}s)")
         else:
             # For infinite capture, use a reasonable timeout
             timeout = 300  # 5 minutes max
-            logger.info(f"Starting uhd_rx_cfile: infinite capture (max {timeout}s timeout)")
+            logger.info(f"Starting uhd_rx_cfile: infinite capture at {freq} (max {timeout}s timeout)")
         
         logger.debug(f"Running command: {' '.join(cmd)}")
         

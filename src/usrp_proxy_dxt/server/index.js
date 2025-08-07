@@ -423,18 +423,13 @@ class USRPProxyServer {
           },
           {
             name: "uhd_rx_cfile",
-            description: "Capture I/Q samples from USRP to complex file using GNU Radio uhd_rx_cfile",
+            description: "Capture I/Q samples from USRP to complex file using GNU Radio uhd_rx_cfile. Returns filename for use with download_file tool.",
             inputSchema: {
               type: "object",
               properties: {
                 freq: {
                   type: "number",
                   description: "RF center frequency in Hz (required)",
-                },
-                filename: {
-                  type: "string",
-                  description: "Output filename",
-                  default: "samples.dat",
                 },
                 // Core UHD parameters from manpage
                 args: {
