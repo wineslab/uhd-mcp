@@ -3,9 +3,9 @@
   "name": "usrp-proxy",
   "display_name": "USRP MCP Proxy",
   "icon": "icon.png",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Local MCP proxy for remote USRP MCP server with software-defined radio capabilities",
-  "long_description": "This extension provides a local MCP proxy that connects to a remote USRP MCP server, enabling Claude Desktop to control software-defined radio equipment via UHD tools. It includes device discovery, signal generation, data capture, and comprehensive radio hardware management through a clean MCP interface.",
+  "long_description": "This extension provides a local MCP proxy that connects to a remote USRP MCP server, enabling Claude Desktop to control software-defined radio equipment via UHD tools. Features comprehensive signal generation with 25+ parameters, GNU Radio integration for data capture, background process management, and professional logging. Includes device discovery, hardware probing, and complete radio hardware management through a clean MCP interface.",
   "author": {
     "name": "Andrea Lacava",
     "email": "thecave003@gmail.com"
@@ -39,11 +39,11 @@
     },
     {
       "name": "uhd_siggen",
-      "description": "Generate signals on USRP with configurable parameters"
+      "description": "Generate signals on USRP with comprehensive parameter control (25+ parameters)"
     },
     {
-      "name": "uhd_rx_samples_to_file",
-      "description": "Capture RF samples from USRP to file"
+      "name": "uhd_rx_cfile",
+      "description": "Capture RF samples from USRP to complex file using GNU Radio"
     },
     {
       "name": "get_uhd_info",

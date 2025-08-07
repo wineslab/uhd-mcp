@@ -17,13 +17,23 @@ import {
   ListResourcesRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import fetch from "node-fetch";
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Read version from manifest.json
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const manifestPath = path.join(__dirname, '../manifest.json');
+const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+const VERSION = manifest.version;
 
 class USRPProxyServer {
   constructor() {
     this.server = new Server(
       {
         name: "usrp-proxy",
-        version: "1.0.0",
+        version: VERSION,
       },
       {
         capabilities: {
@@ -44,6 +54,7 @@ class USRPProxyServer {
     this.logDebug("USRP Proxy server initialized");
     this.logDebug(`Server URL: ${this.serverUrl}`);
     this.logDebug(`Request timeout: ${this.requestTimeout}ms`);
+    this.logDebug(`Version: ${VERSION}`);
   }
 
   logDebug(message) {
@@ -153,7 +164,7 @@ class USRPProxyServer {
         params: {
           protocolVersion: "2024-11-05",
           capabilities: {},
-          clientInfo: { name: "usrp-proxy-dxt", version: "1.0.0" },
+          clientInfo: { name: "usrp-proxy-dxt", version: VERSION },
         },
       };
 
