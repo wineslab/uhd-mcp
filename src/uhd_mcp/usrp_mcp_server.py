@@ -470,40 +470,34 @@ def list_processes() -> str:
 def uhd_rx_cfile(
     freq: float,
     filename: str = "samples.dat",
-    # UHD Arguments
-    device_args: Optional[str] = None,
-    spec: Optional[str] = None,
-    antenna: Optional[str] = None,
-    samp_rate: float = 1e6,
-    gain: Optional[float] = None,
-    lo_offset: Optional[float] = None,
-    wire_format: str = "sc16",
-    scalar: int = 1024,
-    # Capture Arguments
-    output_shorts: bool = False,
-    nsamples: Optional[float] = None,
-    verbose: bool = False,
-    show_async_msg: bool = False,
+    # Core UHD parameters from manpage
+    args: Optional[str] = None,  # UHD device address args
+    spec: Optional[str] = None,  # Subdevice specification  
+    antenna: Optional[str] = None,  # Select Rx antenna
+    samp_rate: float = 1e6,  # Sample rate (bandwidth)
+    gain: Optional[float] = None,  # Gain in dB (default: midpoint)
+    lo_offset: Optional[float] = None,  # Daughterboard LO offset
+    # Output options
+    output_shorts: bool = False,  # Output 16-bit shorts instead of floats
+    nsamples: Optional[float] = None,  # Number of samples to collect
+    verbose: bool = False,  # Verbose output
     additional_args: Optional[str] = None
 ) -> str:
     """
-    Capture I/Q samples from USRP to complex file using uhd_rx_cfile
+    Capture I/Q samples from USRP to complex file using GNU Radio uhd_rx_cfile
     
-    Args:
+    Based on official manpage parameters:
         freq: RF center frequency in Hz (required)
         filename: Output filename (default: samples.dat)
-        device_args: UHD device address args
+        args: UHD device address args (e.g., "addr=192.168.10.2")
         spec: Subdevice of UHD device where appropriate
         antenna: Select Rx antenna where appropriate
         samp_rate: Sample rate (bandwidth) in Hz (default: 1e6)
-        gain: RX gain in dB (default: midpoint)
-        lo_offset: Daughterboard LO offset
-        wire_format: Wire format from USRP (default: sc16)
-        scalar: Scalar multiplier value for sc8 wire format (default: 1024)
-        output_shorts: Output interleaved shorts instead of complex floats
-        nsamples: Number of samples to collect (None for infinite)
+        gain: Gain in dB (default: midpoint if not specified)
+        lo_offset: Daughterboard LO offset (default: hw default)
+        output_shorts: Output 16-bit interleaved shorts instead of complex floats
+        nsamples: Number of samples to collect (default: infinite)
         verbose: Verbose output
-        show_async_msg: Show asynchronous message notifications
         additional_args: Additional command-line arguments
     """
     try:
@@ -513,30 +507,28 @@ def uhd_rx_cfile(
         # Required frequency argument
         cmd.extend(["-f", str(freq)])
         
-        # UHD Arguments
-        if device_args:
-            cmd.extend(["-a", device_args])
+        # UHD device arguments
+        if args:
+            cmd.extend(["-a", args])
+        
+        # Subdevice specification
         if spec:
             cmd.extend(["--spec", spec])
+        
+        # Antenna selection
         if antenna:
             cmd.extend(["-A", antenna])
         
         # Sample rate
         cmd.extend(["--samp-rate", str(samp_rate)])
         
-        # Gain (if specified)
+        # Gain settings
         if gain is not None:
             cmd.extend(["-g", str(gain)])
         
         # LO offset
         if lo_offset is not None:
             cmd.extend(["--lo-offset", str(lo_offset)])
-        
-        # Wire format
-        cmd.extend(["--wire-format", wire_format])
-        
-        # Scalar for sc8 format
-        cmd.extend(["--scalar", str(scalar)])
         
         # Output format
         if output_shorts:
@@ -549,10 +541,6 @@ def uhd_rx_cfile(
         # Verbose output
         if verbose:
             cmd.append("-v")
-        
-        # Async messages
-        if show_async_msg:
-            cmd.append("--show-async-msg")
         
         # Additional arguments
         if additional_args:
@@ -587,10 +575,10 @@ def uhd_rx_cfile(
         # Calculate number of samples captured based on file size
         if file_created:
             if output_shorts:
-                # 16-bit complex shorts (4 bytes per sample)
+                # 16-bit complex shorts (4 bytes per sample: 2 bytes I + 2 bytes Q)
                 samples_captured = file_size // 4
             else:
-                # 32-bit complex floats (8 bytes per sample)
+                # 32-bit complex floats (8 bytes per sample: 4 bytes I + 4 bytes Q)
                 samples_captured = file_size // 8
             
             logger.info(f"Capture completed: {samples_captured} samples captured, file size: {file_size} bytes")
@@ -611,7 +599,7 @@ def uhd_rx_cfile(
                 "samples_requested": nsamples,
                 "samples_captured": samples_captured,
                 "duration_seconds": samples_captured / samp_rate if samples_captured > 0 else 0,
-                "output_format": "16-bit shorts" if output_shorts else "32-bit complex floats"
+                "output_format": "16-bit complex shorts" if output_shorts else "32-bit complex floats"
             },
             "output_file": filename,
             "file_created": file_created,

@@ -436,10 +436,10 @@ class USRPProxyServer {
                   description: "Output filename",
                   default: "samples.dat",
                 },
-                // UHD Arguments
-                device_args: {
+                // Core UHD parameters from manpage
+                args: {
                   type: "string",
-                  description: "UHD device address args",
+                  description: "UHD device address args (e.g., 'addr=192.168.10.2')",
                 },
                 spec: {
                   type: "string",
@@ -456,27 +456,16 @@ class USRPProxyServer {
                 },
                 gain: {
                   type: "number",
-                  description: "RX gain in dB (default: midpoint)",
+                  description: "Gain in dB (default: midpoint if not specified)",
                 },
                 lo_offset: {
                   type: "number",
-                  description: "Daughterboard LO offset",
+                  description: "Daughterboard LO offset (default: hw default)",
                 },
-                wire_format: {
-                  type: "string",
-                  description: "Wire format from USRP",
-                  enum: ["sc16", "sc8", "fc32"],
-                  default: "sc16",
-                },
-                scalar: {
-                  type: "number",
-                  description: "Scalar multiplier value for sc8 wire format",
-                  default: 1024,
-                },
-                // Capture Arguments
+                // Output options
                 output_shorts: {
                   type: "boolean",
-                  description: "Output interleaved shorts instead of complex floats",
+                  description: "Output 16-bit interleaved shorts instead of complex floats",
                   default: false,
                 },
                 nsamples: {
@@ -486,11 +475,6 @@ class USRPProxyServer {
                 verbose: {
                   type: "boolean",
                   description: "Verbose output",
-                  default: false,
-                },
-                show_async_msg: {
-                  type: "boolean",
-                  description: "Show asynchronous message notifications",
                   default: false,
                 },
                 additional_args: {
