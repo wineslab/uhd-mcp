@@ -423,7 +423,7 @@ class USRPProxyServer {
           },
           {
             name: "uhd_rx_cfile",
-            description: "Capture I/Q samples from USRP to complex file using GNU Radio uhd_rx_cfile. Returns filename for use with download_file tool.",
+            description: "Capture I/Q samples from USRP to complex file using GNU Radio uhd_rx_cfile. Files are saved to shared data layer.",
             inputSchema: {
               type: "object",
               properties: {
@@ -478,6 +478,14 @@ class USRPProxyServer {
                 },
               },
               required: ["freq"],
+            },
+          },
+          {
+            name: "list_captured_files",
+            description: "List all captured files in the shared data layer",
+            inputSchema: {
+              type: "object",
+              properties: {},
             },
           },
           {

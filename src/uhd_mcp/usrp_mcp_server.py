@@ -13,7 +13,11 @@ import threading
 import time
 import argparse
 
-from .utils import parse_uhd_find_devices_output, parse_uhd_config_info_output
+from .utils import (
+    parse_uhd_find_devices_output, 
+    parse_uhd_config_info_output,
+    get_shared_data_dir
+)
 
 # Create the MCP server
 mcp = FastMCP("USRP Control Server")
@@ -498,15 +502,22 @@ def uhd_rx_cfile(
         verbose: Verbose output
         additional_args: Additional command-line arguments
         
-    Returns filename of captured data file for use with download_file tool.
+    Returns filename of captured data file.
     """
     try:
         logger = logging.getLogger(__name__)
         
+        # Get the shared data layer directory
+        shared_data_dir = get_shared_data_dir()
+        
+        # Ensure the directory exists (create if needed)
+        os.makedirs(shared_data_dir, exist_ok=True)
+        
         # Generate unique filename with timestamp
         timestamp = int(time.time())
         extension = ".cfile" if not output_shorts else ".sfile"
-        filename = f"uhd_rx_{timestamp}_{int(freq/1e6)}MHz{extension}"
+        filename_base = f"uhd_rx_{timestamp}_{int(freq/1e6)}MHz{extension}"
+        filename = os.path.join(shared_data_dir, filename_base)
         
         cmd = ["uhd_rx_cfile"]
         
@@ -559,11 +570,11 @@ def uhd_rx_cfile(
         if nsamples is not None:
             duration = nsamples / samp_rate
             timeout = max(60, duration + 30)
-            logger.info(f"Starting uhd_rx_cfile: {nsamples} samples at {freq} with sampling rate {samp_rate} Hz (estimated {duration:.2f}s)")
+            logger.info(f"Starting uhd_rx_cfile: {nsamples} samples at {freq} Hz (estimated {duration:.2f}s) -> {filename}")
         else:
             # For infinite capture, use a reasonable timeout
             timeout = 300  # 5 minutes max
-            logger.info(f"Starting uhd_rx_cfile: infinite capture at {freq} (max {timeout}s timeout)")
+            logger.info(f"Starting uhd_rx_cfile: infinite capture at {freq} Hz (max {timeout}s timeout) -> {filename}")
         
         logger.debug(f"Running command: {' '.join(cmd)}")
         
@@ -587,7 +598,7 @@ def uhd_rx_cfile(
                 # 32-bit complex floats (8 bytes per sample: 4 bytes I + 4 bytes Q)
                 samples_captured = file_size // 8
             
-            logger.info(f"Capture completed: {samples_captured} samples captured, file size: {file_size} bytes")
+            logger.info(f"Capture completed: {samples_captured} samples captured, file size: {file_size} bytes, saved to: {filename}")
         else:
             samples_captured = 0
             logger.warning("No output file created during capture")
@@ -629,6 +640,80 @@ def uhd_rx_cfile(
             "success": False,
             "error": str(e),
             "command": "uhd_rx_cfile"
+        }, indent=2)
+
+@mcp.tool()
+def list_captured_files() -> str:
+    """
+    List all captured files in the shared data layer
+    
+    Returns:
+        JSON with list of available files and their information
+    """
+    try:
+        logger = logging.getLogger(__name__)
+        
+        # Get the shared data layer directory
+        shared_data_dir = get_shared_data_dir()
+        
+        # Check if directory exists
+        if not os.path.exists(shared_data_dir):
+            return json.dumps({
+                "success": False,
+                "error": f"Shared data directory {shared_data_dir} does not exist",
+                "files": []
+            }, indent=2)
+        
+        # List all files
+        files_info = []
+        try:
+            for filename in os.listdir(shared_data_dir):
+                file_path = os.path.join(shared_data_dir, filename)
+                
+                # Skip directories
+                if not os.path.isfile(file_path):
+                    continue
+                
+                file_size = os.path.getsize(file_path)
+                file_size_mb = file_size / (1024 * 1024)
+                
+                # Get file modification time
+                mod_time = os.path.getmtime(file_path)
+                
+                files_info.append({
+                    "filename": filename,
+                    "file_path": file_path,
+                    "file_size_bytes": file_size,
+                    "file_size_mb": round(file_size_mb, 2),
+                    "modified_timestamp": mod_time,
+                    "modified_time": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(mod_time))
+                })
+        
+        except PermissionError:
+            return json.dumps({
+                "success": False,
+                "error": f"Permission denied accessing {shared_data_dir}",
+                "files": []
+            }, indent=2)
+        
+        # Sort by modification time (newest first)
+        files_info.sort(key=lambda x: x["modified_timestamp"], reverse=True)
+        
+        logger.info(f"Listed {len(files_info)} files in shared data layer")
+        
+        return json.dumps({
+            "success": True,
+            "shared_data_dir": shared_data_dir,
+            "total_files": len(files_info),
+            "files": files_info
+        }, indent=2)
+        
+    except Exception as e:
+        logger.error(f"Error listing captured files: {str(e)}")
+        return json.dumps({
+            "success": False,
+            "error": str(e),
+            "files": []
         }, indent=2)
 
 @mcp.tool()
@@ -753,7 +838,8 @@ Examples:
     
     # Start server with HTTP transport
     logger.info(f"Starting USRP FastMCP server on HTTP {args.host}:{args.port}/mcp")
-    logger.info("Available tools: uhd_find_devices, uhd_usrp_probe, uhd_siggen, uhd_rx_cfile")
+    logger.info("Available tools: uhd_find_devices, uhd_usrp_probe, uhd_siggen, uhd_rx_cfile, list_captured_files")
+    logger.info(f"Shared data directory: {get_shared_data_dir()}")
     logger.info("Press Ctrl+C to stop the server")
     
     try:

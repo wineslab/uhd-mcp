@@ -40,9 +40,19 @@ spec:
           ports:
             - containerPort: 8080
               protocol: TCP
+          env:
+            - name: MCP_SHARED_DATA_DIR
+              value: "/home/worker/uhd-mcp/shared-data-layer"
           imagePullPolicy: Always
           terminationMessagePolicy: File
           image: 'image-registry.openshift-image-registry.svc:5000/deployment-pipeline/mcp-uhd:latest'
+          volumeMounts:
+            - name: mcp-shared-data-layer-volume
+              mountPath: /home/worker/uhd-mcp/shared-data-layer
+      volumes:
+        - name: mcp-shared-data-layer-volume
+          persistentVolumeClaim:
+            claimName: mcp-shared-data-layer-pvc
       restartPolicy: Always
       terminationGracePeriodSeconds: 30
       dnsPolicy: ClusterFirst
