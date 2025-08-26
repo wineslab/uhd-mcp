@@ -30,15 +30,6 @@ NEW_REMOTE="https://${PAT_TOKEN}@github.com/wineslab/uhd-mcp"
 echo "🔗 Setting new remote: https://***@github.com/wineslab/uhd-mcp"
 git remote add origin "$NEW_REMOTE"
 
-# Verify remote was set correctly
-REMOTE_URL=$(git remote get-url origin 2>/dev/null)
-if [ $? -eq 0 ]; then
-    echo "✅ Remote configured successfully"
-else
-    echo "❌ Failed to configure remote"
-    exit 1
-fi
-
 # Pull latest changes from current branch
 echo "⬇️  Pulling latest changes..."
 if git pull; then
