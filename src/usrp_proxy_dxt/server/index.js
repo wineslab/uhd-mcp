@@ -526,6 +526,27 @@ class USRPProxyServer {
               properties: {},
             },
           },
+          {
+            name: "vnc_screenshot",
+            description: "Take a screenshot from the configured VNC server and save it in the shared data directory.",
+            inputSchema: {
+              type: "object",
+              properties: {
+                filename: {
+                  type: "string",
+                  description: "Optional filename for the screenshot (default: vncshot_TIMESTAMP.png)",
+                },
+              },
+            },
+          },
+          {
+            name: "list_screenshots",
+            description: "List all screenshot files in the shared data directory (PNG only)",
+            inputSchema: {
+              type: "object",
+              properties: {},
+            },
+          },
         ],
       };
     });

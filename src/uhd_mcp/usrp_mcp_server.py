@@ -16,7 +16,8 @@ import argparse
 from .utils import (
     parse_uhd_find_devices_output, 
     parse_uhd_config_info_output,
-    get_shared_data_dir
+    get_shared_data_dir,
+    take_vnc_screenshot
 )
 
 # Create the MCP server
@@ -769,6 +770,126 @@ def get_uhd_info() -> str:
     except Exception as e:
         return f"Error getting UHD info: {str(e)}"
 
+@mcp.tool()
+def vnc_screenshot(filename: Optional[str] = None) -> str:
+    """
+    Take a screenshot from the configured VNC server and save it in the shared data directory
+    
+    Args:
+        filename: Optional filename for the screenshot (default: vncshot_TIMESTAMP.png)
+        
+    Returns:
+        JSON with screenshot path and status
+    """
+    try:
+        logger = logging.getLogger(__name__)
+        
+        # Get the shared data layer directory  
+        shared_data_dir = get_shared_data_dir()
+        
+        # Take VNC screenshot
+        filepath, error = take_vnc_screenshot(shared_data_dir, filename)
+        
+        if error:
+            logger.error(f"VNC screenshot failed: {error}")
+            return json.dumps({
+                "success": False,
+                "error": error
+            }, indent=2)
+        
+        # Get file info
+        file_size = os.path.getsize(filepath) if os.path.exists(filepath) else 0
+        
+        logger.info(f"VNC screenshot saved: {filepath} ({file_size} bytes)")
+        
+        return json.dumps({
+            "success": True,
+            "screenshot_path": filepath,
+            "filename": os.path.basename(filepath),
+            "file_size_bytes": file_size
+        }, indent=2)
+        
+    except Exception as e:
+        logger.error(f"VNC screenshot error: {str(e)}")
+        return json.dumps({
+            "success": False,
+            "error": str(e)
+        }, indent=2)
+
+@mcp.tool()
+def list_screenshots() -> str:
+    """
+    List all screenshot files in the shared data directory (PNG files only)
+    
+    Returns:
+        JSON with list of screenshot files and their information
+    """
+    try:
+        logger = logging.getLogger(__name__)
+        
+        # Get the shared data layer directory
+        shared_data_dir = get_shared_data_dir()
+        
+        # Check if directory exists
+        if not os.path.exists(shared_data_dir):
+            return json.dumps({
+                "success": False,
+                "error": f"Shared data directory {shared_data_dir} does not exist",
+                "screenshots": []
+            }, indent=2)
+        
+        # List PNG files (screenshots)
+        screenshots_info = []
+        try:
+            for filename in os.listdir(shared_data_dir):
+                file_path = os.path.join(shared_data_dir, filename)
+                
+                # Only include PNG files (screenshots)
+                if not (os.path.isfile(file_path) and filename.lower().endswith('.png')):
+                    continue
+                
+                file_size = os.path.getsize(file_path)
+                file_size_mb = file_size / (1024 * 1024)
+                
+                # Get file modification time
+                mod_time = os.path.getmtime(file_path)
+                
+                screenshots_info.append({
+                    "filename": filename,
+                    "file_path": file_path,
+                    "file_size_bytes": file_size,
+                    "file_size_mb": round(file_size_mb, 2),
+                    "modified_timestamp": mod_time,
+                    "modified_time": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(mod_time))
+                })
+        
+        except PermissionError:
+            return json.dumps({
+                "success": False,
+                "error": f"Permission denied accessing {shared_data_dir}",
+                "screenshots": []
+            }, indent=2)
+        
+        # Sort by modification time (newest first)
+        screenshots_info.sort(key=lambda x: x["modified_timestamp"], reverse=True)
+        
+        logger.info(f"Listed {len(screenshots_info)} screenshot files in shared data layer")
+        
+        return json.dumps({
+            "success": True,
+            "shared_data_dir": shared_data_dir,
+            "total_screenshots": len(screenshots_info),
+            "screenshots": screenshots_info
+        }, indent=2)
+        
+    except Exception as e:
+        logger.error(f"Error listing screenshots: {str(e)}")
+        return json.dumps({
+            "success": False,
+            "error": str(e),
+            "screenshots": []
+        }, indent=2)
+
 def cleanup_on_exit():
     """Cleanup function for atexit"""
     logger = logging.getLogger(__name__)
@@ -838,7 +959,7 @@ Examples:
     
     # Start server with HTTP transport
     logger.info(f"Starting USRP FastMCP server on HTTP {args.host}:{args.port}/mcp")
-    logger.info("Available tools: uhd_find_devices, uhd_usrp_probe, uhd_siggen, uhd_rx_cfile, list_captured_files")
+    logger.info("Available tools: uhd_find_devices, uhd_usrp_probe, uhd_siggen, uhd_rx_cfile, list_captured_files, vnc_screenshot, list_screenshots")
     logger.info(f"Shared data directory: {get_shared_data_dir()}")
     logger.info("Press Ctrl+C to stop the server")
     

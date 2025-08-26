@@ -27,6 +27,8 @@ classifiers = [
 dependencies = [
   "fastmcp>=0.1.0",
   "aiohttp>=3.8.0",
+  "vncdotool>=1.2.0",
+  "Pillow>=9.0.0",
 ]
 
 [project.urls]
@@ -63,6 +65,10 @@ lint = "ruff check {args:.}"
 format = "black {args:.}"
 format-check = "black --check --diff {args:.}"
 type-check = "mypy {args:src}"
+
+[tool.hatch.scripts]
+run-server = "python src/uhd_mcp/usrp_mcp_server.py"
+test-vnc = """python -c 'from src.uhd_mcp.utils.vnc import take_vnc_screenshot; print(take_vnc_screenshot("/tmp"))'"""
 
 [project.scripts]
 usrp-mcp-server = "uhd_mcp.usrp_mcp_server:main"
