@@ -20,6 +20,10 @@ if [ ! -d ".git" ]; then
     exit 1
 fi
 
+# Get current branch name before modifying remotes
+CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "main")
+echo "🔀 Current branch: $CURRENT_BRANCH"
+
 # Remove existing remote configurations
 echo "🗑️  Removing existing remote configurations..."
 git remote remove origin 2>/dev/null || true
@@ -30,9 +34,18 @@ NEW_REMOTE="https://${PAT_TOKEN}@github.com/wineslab/uhd-mcp"
 echo "🔗 Setting new remote: https://***@github.com/wineslab/uhd-mcp"
 git remote add origin "$NEW_REMOTE"
 
+# Fetch latest information from new remote
+echo "📥 Fetching latest information from remote..."
+if git fetch origin; then
+    echo "✅ Fetch completed successfully"
+else
+    echo "❌ Failed to fetch from remote"
+    exit 1
+fi
+
 # Pull latest changes from current branch
 echo "⬇️  Pulling latest changes..."
-if git pull; then
+if git pull origin "$CURRENT_BRANCH"; then
     echo "✅ Repository updated successfully"
     
     # Show latest commit info
