@@ -41,8 +41,6 @@ if git pull; then
     
 else
     echo "❌ Failed to pull changes"
-    echo "⚠️  This might be due to local changes conflicting with remote changes"
-    echo "   Consider stashing local changes or resolving conflicts manually"
     exit 1
 fi
 
