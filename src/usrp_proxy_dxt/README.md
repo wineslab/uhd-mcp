@@ -18,6 +18,7 @@ src/usrp_proxy_dxt/
 ## ✅ Key Features Implemented
 
 ### MCP Protocol Compliance
+
 - ✅ Proper stdio transport for Claude Desktop integration
 - ✅ JSON-RPC 2.0 protocol implementation
 - ✅ MCP session management with remote server
@@ -25,6 +26,7 @@ src/usrp_proxy_dxt/
 - ✅ Robust error handling and timeout management
 
 ### USRP Tool Integration
+
 - ✅ `uhd_find_devices` - Device discovery with structured JSON
 - ✅ `uhd_usrp_probe` - Hardware probing with argument support
 - ✅ `uhd_siggen` - Signal generation with full parameter control
@@ -33,6 +35,7 @@ src/usrp_proxy_dxt/
 - ✅ Process management tools (list, stop, cleanup)
 
 ### User Experience
+
 - ✅ User-configurable server URL, timeout, and debug settings
 - ✅ Comprehensive tool schemas with validation
 - ✅ Debug logging for troubleshooting
@@ -42,6 +45,7 @@ src/usrp_proxy_dxt/
 ## 🚀 Quick Start
 
 ### 1. Test the Extension
+
 ```bash
 cd src/usrp_proxy_dxt
 ./dev-setup.sh
@@ -49,6 +53,7 @@ node test.js  # Optional: comprehensive testing
 ```
 
 ### 2. Package for Claude Desktop
+
 ```bash
 # From the uhd-mcp project root directory
 npm install -g @anthropic-ai/dxt
@@ -56,6 +61,7 @@ dxt pack src/usrp_proxy_dxt/
 ```
 
 ### 3. Install in Claude Desktop
+
 - Open Claude Desktop
 - Go to Settings → Extensions
 - Install the generated `usrp_proxy_dxt.dxt` file
@@ -63,12 +69,13 @@ dxt pack src/usrp_proxy_dxt/
 
 ## 🔧 Architecture Overview
 
-```
+```text
 Claude Desktop ←→ DXT Proxy ←→ HTTP/SSE ←→ Remote USRP Server ←→ UHD Tools ←→ USRP Hardware
      (stdio)         (MCP)        (JSON-RPC)       (subprocess)      (USB/Ethernet)
 ```
 
 The proxy handles:
+
 - **Protocol Translation**: stdio ↔ HTTP with MCP JSON-RPC
 - **Session Management**: Automatic MCP session initialization
 - **Error Handling**: Timeouts, network errors, tool failures
@@ -78,6 +85,7 @@ The proxy handles:
 ## 📊 Supported Tools
 
 ### Core UHD Tools
+
 - `uhd_find_devices` - Discover connected USRP devices
 - `uhd_usrp_probe` - Probe device capabilities and tree structure
 - `uhd_siggen` - Generate RF signals with comprehensive parameter control (25+ parameters)
@@ -85,11 +93,13 @@ The proxy handles:
 - `get_uhd_info` - Get UHD installation and configuration info
 
 ### Process Management
+
 - `list_processes` - List running background processes
 - `stop_process` - Stop specific background processes
 - `cleanup_all_processes` - Stop all background processes
 
 ### Enhanced Features
+
 - **Duration Control**: Automatic process termination after specified duration
 - **Background Processes**: Long-running signal generation with proper management
 - **Graceful Stopping**: Proper signal handling for clean process termination
@@ -105,7 +115,7 @@ When installing this extension, you'll be prompted to configure:
 
 **Example Configuration:**
 ```
-USRP Server URL: https://uhd-mcp-route-mcp-services.apps.tenoran.automation.otic.open6g.net/mcp/
+USRP Server URL: https://uhd-mcp-route-mcp-services.apps.tenoran.automation.otic.open6g.net/mcp
 Request Timeout: 60 seconds
 Debug Mode: false (or true for troubleshooting)
 ```
@@ -113,6 +123,7 @@ Debug Mode: false (or true for troubleshooting)
 ## 🧪 Testing & Development
 
 ### Local Testing
+
 ```bash
 # Run setup and validation
 ./dev-setup.sh
@@ -125,6 +136,7 @@ DEBUG_MODE=true node server/index.js
 ```
 
 ### Package for Claude Desktop
+
 ```bash
 # From the project root directory
 dxt pack src/usrp_proxy_dxt/
@@ -311,6 +323,7 @@ The server now uses Python's logging module with configurable levels:
 - **CRITICAL**: Serious errors that may halt execution
 
 Configure logging level when starting the server:
+
 ```bash
 python3 -m src.uhd_mcp.usrp_mcp_server --log-level DEBUG
 ```

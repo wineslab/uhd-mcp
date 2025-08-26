@@ -45,7 +45,7 @@ class USRPProxyServer {
     );
 
     // Configuration from environment variables
-    this.serverUrl = process.env.USRP_SERVER_URL || "https://uhd-mcp-route-mcp-services.apps.tenoran.automation.otic.open6g.net/mcp/";
+    this.serverUrl = process.env.USRP_SERVER_URL || "https://uhd-mcp-route-mcp-services.apps.tenoran.automation.otic.open6g.net/mcp";
     this.requestTimeout = parseInt(process.env.REQUEST_TIMEOUT || "60") * 1000; // Convert to milliseconds
     this.debugMode = process.env.DEBUG_MODE === "true"; // Disable debug by default in production
     this.sessionId = null;
@@ -638,7 +638,7 @@ class USRPProxyServer {
 
 // Start the proxy server
 console.error("🚀 Starting USRP MCP Proxy...");
-console.error(`📡 Target server: ${process.env.USRP_SERVER_URL || "https://uhd-mcp-route-mcp-services.apps.tenoran.automation.otic.open6g.net/mcp/"}`);
+console.error(`📡 Target server: ${process.env.USRP_SERVER_URL || "https://uhd-mcp-route-mcp-services.apps.tenoran.automation.otic.open6g.net/mcp"}`);
 console.error(`🐛 Debug mode: ${process.env.DEBUG_MODE === "true" ? "ON" : "OFF"}`);
 
 // Add process event handlers for better debugging

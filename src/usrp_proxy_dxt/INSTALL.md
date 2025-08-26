@@ -72,7 +72,7 @@ When installing the extension in Claude Desktop, you'll be prompted to configure
 ### Required Settings
 - **USRP Server URL**: The full URL to your USRP MCP server endpoint
   - Example: `https://your-server.com/mcp/`
-  - Default: `https://uhd-mcp-route-mcp-services.apps.tenoran.automation.otic.open6g.net/mcp/`
+  - Default: `https://uhd-mcp-route-mcp-services.apps.tenoran.automation.otic.open6g.net/mcp`
 
 ### Optional Settings
 - **Request Timeout**: Maximum time to wait for server responses (10-300 seconds)

@@ -86,9 +86,9 @@
     "server_url": {
       "type": "string",
       "title": "USRP Server URL",
-      "description": "URL of the remote USRP MCP server (e.g., https://uhd-mcp-route-mcp-services.apps.tenoran.automation.otic.open6g.net/mcp/)",
+      "description": "URL of the remote USRP MCP server (e.g., https://uhd-mcp-route-mcp-services.apps.tenoran.automation.otic.open6g.net/mcp)",
       "required": true,
-      "default": "https://uhd-mcp-route-mcp-services.apps.tenoran.automation.otic.open6g.net/mcp/"
+      "default": "https://uhd-mcp-route-mcp-services.apps.tenoran.automation.otic.open6g.net/mcp"
     },
     "request_timeout": {
       "type": "number",

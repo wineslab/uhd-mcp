@@ -30,7 +30,7 @@ class MCPProxyTester {
       stdio: ["pipe", "pipe", "pipe"],
       env: {
         ...process.env,
-        USRP_SERVER_URL: "https://uhd-mcp-route-mcp-services.apps.tenoran.automation.otic.open6g.net/mcp/",
+        USRP_SERVER_URL: "https://uhd-mcp-route-mcp-services.apps.tenoran.automation.otic.open6g.net/mcp",
         DEBUG_MODE: "true",
         REQUEST_TIMEOUT: "30"
       }
