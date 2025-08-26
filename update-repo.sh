@@ -20,10 +20,6 @@ if [ ! -d ".git" ]; then
     exit 1
 fi
 
-# Get current branch and remote info
-CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "unknown")
-echo "🔀 Current branch: $CURRENT_BRANCH"
-
 # Remove existing remote configurations
 echo "🗑️  Removing existing remote configurations..."
 git remote remove origin 2>/dev/null || true
@@ -43,15 +39,7 @@ else
     exit 1
 fi
 
-# Perform initial git pull to sync with remote
-echo "⬇️  Performing initial pull from remote..."
-if git pull origin; then
-    echo "✅ Initial pull completed successfully"
-else
-    echo "⚠️  Initial pull failed, continuing with fetch strategy..."
-fi
-
-# Perform git pull to update current branch
+# Pull latest changes from current branch
 echo "⬇️  Pulling latest changes..."
 if git pull; then
     echo "✅ Repository updated successfully"
