@@ -481,11 +481,18 @@ class USRPProxyServer {
             },
           },
           {
-            name: "list_captured_files",
-            description: "List all captured files in the shared data layer",
+            name: "list_shared_files",
+            description: "List all files in the shared data directory (captures, screenshots, etc.)",
             inputSchema: {
               type: "object",
-              properties: {},
+              properties: {
+                file_type: {
+                  type: "string",
+                  description: "Filter by file type (optional): 'images' for PNG/JPG, 'captures' for DAT/complex files, 'all' for everything",
+                  enum: ["all", "images", "captures"],
+                  default: "all"
+                },
+              },
             },
           },
           {
@@ -537,14 +544,6 @@ class USRPProxyServer {
                   description: "Optional filename for the screenshot (default: vncshot_TIMESTAMP.png)",
                 },
               },
-            },
-          },
-          {
-            name: "list_screenshots",
-            description: "List all screenshot files in the shared data directory (PNG only)",
-            inputSchema: {
-              type: "object",
-              properties: {},
             },
           },
         ],

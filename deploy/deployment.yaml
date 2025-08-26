@@ -49,6 +49,11 @@ spec:
               value: "5900"
             - name: VNC_PASSWORD
               value: "1234"
+            - name: PAT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: github-pat
+                  key: token
           imagePullPolicy: Always
           terminationMessagePolicy: File
           image: 'image-registry.openshift-image-registry.svc:5000/deployment-pipeline/mcp-uhd:latest'

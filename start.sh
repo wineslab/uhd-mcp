@@ -3,6 +3,20 @@
 echo "🚀 USRP Quick Start (Hatch Environment)"
 echo "============================================="
 
+# Step 1: Update repository if PAT_TOKEN is provided
+if [ -n "$PAT_TOKEN" ]; then
+    echo "🔄 Updating repository with latest changes..."
+    ./update-repo.sh
+    if [ $? -ne 0 ]; then
+        echo "❌ Repository update failed, but continuing with startup..."
+        echo "   Check PAT_TOKEN and network connectivity"
+    fi
+    echo
+else
+    echo "⚠️  PAT_TOKEN not provided, skipping repository update"
+    echo
+fi
+
 # Ensure PATH includes pipx/hatch directories
 export PATH="$HOME/.local/bin:/root/.local/bin:$PATH"
 

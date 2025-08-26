@@ -644,12 +644,18 @@ def uhd_rx_cfile(
         }, indent=2)
 
 @mcp.tool()
-def list_captured_files() -> str:
+def list_shared_files(file_type: str = "all") -> str:
     """
-    List all captured files in the shared data layer
+    List all files in the shared data directory with optional filtering
+    
+    Args:
+        file_type (str): Filter by file type:
+                        "all" - all files (default)
+                        "images" - PNG/JPG files (screenshots)
+                        "captures" - DAT/complex files (RF captures)
     
     Returns:
-        JSON with list of available files and their information
+        JSON with list of files and their information
     """
     try:
         logger = logging.getLogger(__name__)
@@ -665,7 +671,11 @@ def list_captured_files() -> str:
                 "files": []
             }, indent=2)
         
-        # List all files
+        # Define file extensions for different types
+        image_extensions = {'.png', '.jpg', '.jpeg', '.gif', '.bmp'}
+        capture_extensions = {'.dat', '.bin', '.complex', '.iq', '.cfile'}
+        
+        # List files based on filter
         files_info = []
         try:
             for filename in os.listdir(shared_data_dir):
@@ -675,11 +685,29 @@ def list_captured_files() -> str:
                 if not os.path.isfile(file_path):
                     continue
                 
+                # Get file extension
+                _, ext = os.path.splitext(filename.lower())
+                
+                # Apply filter
+                if file_type == "images" and ext not in image_extensions:
+                    continue
+                elif file_type == "captures" and ext not in capture_extensions:
+                    continue
+                # For "all", include everything
+                
                 file_size = os.path.getsize(file_path)
                 file_size_mb = file_size / (1024 * 1024)
                 
                 # Get file modification time
                 mod_time = os.path.getmtime(file_path)
+                
+                # Determine file category
+                if ext in image_extensions:
+                    category = "image"
+                elif ext in capture_extensions:
+                    category = "capture"
+                else:
+                    category = "other"
                 
                 files_info.append({
                     "filename": filename,
@@ -687,7 +715,9 @@ def list_captured_files() -> str:
                     "file_size_bytes": file_size,
                     "file_size_mb": round(file_size_mb, 2),
                     "modified_timestamp": mod_time,
-                    "modified_time": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(mod_time))
+                    "modified_time": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(mod_time)),
+                    "category": category,
+                    "extension": ext
                 })
         
         except PermissionError:
@@ -700,17 +730,18 @@ def list_captured_files() -> str:
         # Sort by modification time (newest first)
         files_info.sort(key=lambda x: x["modified_timestamp"], reverse=True)
         
-        logger.info(f"Listed {len(files_info)} files in shared data layer")
+        logger.info(f"Listed {len(files_info)} files in shared data layer (filter: {file_type})")
         
         return json.dumps({
             "success": True,
             "shared_data_dir": shared_data_dir,
+            "filter_applied": file_type,
             "total_files": len(files_info),
             "files": files_info
         }, indent=2)
         
     except Exception as e:
-        logger.error(f"Error listing captured files: {str(e)}")
+        logger.error(f"Error listing shared files: {str(e)}")
         return json.dumps({
             "success": False,
             "error": str(e),
@@ -816,80 +847,6 @@ def vnc_screenshot(filename: Optional[str] = None) -> str:
             "error": str(e)
         }, indent=2)
 
-@mcp.tool()
-def list_screenshots() -> str:
-    """
-    List all screenshot files in the shared data directory (PNG files only)
-    
-    Returns:
-        JSON with list of screenshot files and their information
-    """
-    try:
-        logger = logging.getLogger(__name__)
-        
-        # Get the shared data layer directory
-        shared_data_dir = get_shared_data_dir()
-        
-        # Check if directory exists
-        if not os.path.exists(shared_data_dir):
-            return json.dumps({
-                "success": False,
-                "error": f"Shared data directory {shared_data_dir} does not exist",
-                "screenshots": []
-            }, indent=2)
-        
-        # List PNG files (screenshots)
-        screenshots_info = []
-        try:
-            for filename in os.listdir(shared_data_dir):
-                file_path = os.path.join(shared_data_dir, filename)
-                
-                # Only include PNG files (screenshots)
-                if not (os.path.isfile(file_path) and filename.lower().endswith('.png')):
-                    continue
-                
-                file_size = os.path.getsize(file_path)
-                file_size_mb = file_size / (1024 * 1024)
-                
-                # Get file modification time
-                mod_time = os.path.getmtime(file_path)
-                
-                screenshots_info.append({
-                    "filename": filename,
-                    "file_path": file_path,
-                    "file_size_bytes": file_size,
-                    "file_size_mb": round(file_size_mb, 2),
-                    "modified_timestamp": mod_time,
-                    "modified_time": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(mod_time))
-                })
-        
-        except PermissionError:
-            return json.dumps({
-                "success": False,
-                "error": f"Permission denied accessing {shared_data_dir}",
-                "screenshots": []
-            }, indent=2)
-        
-        # Sort by modification time (newest first)
-        screenshots_info.sort(key=lambda x: x["modified_timestamp"], reverse=True)
-        
-        logger.info(f"Listed {len(screenshots_info)} screenshot files in shared data layer")
-        
-        return json.dumps({
-            "success": True,
-            "shared_data_dir": shared_data_dir,
-            "total_screenshots": len(screenshots_info),
-            "screenshots": screenshots_info
-        }, indent=2)
-        
-    except Exception as e:
-        logger.error(f"Error listing screenshots: {str(e)}")
-        return json.dumps({
-            "success": False,
-            "error": str(e),
-            "screenshots": []
-        }, indent=2)
-
 def cleanup_on_exit():
     """Cleanup function for atexit"""
     logger = logging.getLogger(__name__)
@@ -959,7 +916,7 @@ Examples:
     
     # Start server with HTTP transport
     logger.info(f"Starting USRP FastMCP server on HTTP {args.host}:{args.port}/mcp")
-    logger.info("Available tools: uhd_find_devices, uhd_usrp_probe, uhd_siggen, uhd_rx_cfile, list_captured_files, vnc_screenshot, list_screenshots")
+    logger.info("Available tools: uhd_find_devices, uhd_usrp_probe, uhd_siggen, uhd_rx_cfile, list_shared_files, vnc_screenshot")
     logger.info(f"Shared data directory: {get_shared_data_dir()}")
     logger.info("Press Ctrl+C to stop the server")
     
