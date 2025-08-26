@@ -46,6 +46,10 @@
       "description": "Capture RF samples from USRP to complex file using GNU Radio"
     },
     {
+      "name": "list_captured_files",
+      "description": "List all captured files in the shared data layer"
+    },
+    {
       "name": "get_uhd_info",
       "description": "Get UHD installation and configuration information"
     },
@@ -60,6 +64,14 @@
     {
       "name": "cleanup_all_processes",
       "description": "Stop all running UHD background processes"
+    },
+    {
+      "name": "vnc_screenshot",
+      "description": "Take a screenshot from the configured VNC server"
+    },
+    {
+      "name": "list_screenshots",
+      "description": "List all screenshot files in the shared data directory"
     }
   ],
   "tools_generated": false,
