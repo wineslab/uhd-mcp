@@ -31,7 +31,7 @@ def test_waterfall_capture():
     
     # Test parameters
     test_params = {
-        "center_freq": 2.4e9,      # 2.4 GHz (WiFi/ISM band)
+        "center_freq": 3.75e9,      # 3.75 GHz
         "span": 100e6,             # 100 MHz span
         "duration": 30,            # 30 seconds capture
         "interval": 2.0,           # 2 seconds between measurements

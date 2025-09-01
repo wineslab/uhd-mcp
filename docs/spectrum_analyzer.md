@@ -287,3 +287,27 @@ The spectrum analyzer functionality is designed to integrate with the UHD MCP se
 - Integration with USRP signal generation
 - Automated measurement sequences
 - Real-time spectrum monitoring via web interface
+
+
+# References
+
+## Direct Product Pages
+
+- Main Product Page: https://www.keysight.com/us/en/product/N9010B/exa-signal-analyzer-multi-touch-10-hz-44-ghz.html
+- Technical Support Page: https://www.keysight.com/us/en/support/N9010B/exa-signal-analyzer-multi-touch-10-hz-44-ghz.html
+
+## Technical Documentation (PDFs):
+
+- X-Series Programming Conversion Guide: https://www.keysight.com/us/en/assets/9018-02282/user-manuals/9018-02282.pdf
+- N9010B Data Sheet: https://www.keysight.com/us/en/assets/7018-05049/data-sheets/5992-1256.pdf
+- Configuration Guide: https://www.keysight.com/us/en/assets/7018-05046/configuration-guides/5992-1253.pdf
+- N9010B Specifications Guide: https://www.keysight.com/us/en/assets/9018-70012/technical-specifications/9018-70012.pdf
+- SCPI Language Compatibility Reference: https://literature.cdn.keysight.com/litweb/pdf/N9062-90002.pdf
+
+## Remote Control Software:
+
+- Web Remote Control Software: https://www.keysight.com/us/en/assets/7018-01779/technical-overviews/5989-8185.pdf
+- Instrument Firmware Page: https://www.keysight.com/us/en/lib/software-detail/instrument-firmware-software/n9010b-exa-signal-analyzer-instrument-software-2674915.html
+- SCPI Community Discussion: https://community.keysight.com/thread/21176
+
+The X-Series Programming Conversion Guide and SCPI Language Compatibility Reference would be particularly useful for API programming details.

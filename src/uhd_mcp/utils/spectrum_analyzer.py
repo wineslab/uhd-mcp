@@ -107,9 +107,26 @@ class KeysightEXA:
             raise RuntimeError("Not connected to spectrum analyzer")
         
         try:
-            response = self.socket.recv(buffer_size).decode('utf-8').strip()
-            self.logger.debug(f"Received: {response}")
-            return response
+            # For large data transfers, receive in chunks
+            response = b""
+            while True:
+                try:
+                    chunk = self.socket.recv(buffer_size)
+                    if not chunk:
+                        break
+                    response += chunk
+                    # Check if we have a complete response (ends with newline)
+                    if response.endswith(b'\n'):
+                        break
+                except socket.timeout:
+                    if response:  # We got some data
+                        break
+                    else:
+                        raise
+            
+            decoded_response = response.decode('utf-8').strip()
+            self.logger.debug(f"Received: {decoded_response[:100]}...")  # Log first 100 chars
+            return decoded_response
         except Exception as e:
             self.logger.error(f"Receive error: {str(e)}")
             raise
@@ -197,7 +214,26 @@ class KeysightEXA:
             except:
                 amp_data = self.query("TRAC:DATA?", buffer_size=65536)
         
-        amplitudes = np.array([float(x) for x in amp_data.split(',')])
+        # Parse amplitude data with error handling for corrupted values
+        amp_values = []
+        for value_str in amp_data.split(','):
+            try:
+                # Handle potential missing negative sign in scientific notation
+                value_str = value_str.strip()
+                if value_str and not value_str.startswith('-') and 'E+' in value_str:
+                    # Check if this looks like a corrupted negative value
+                    if value_str[0].isdigit():
+                        value_str = '-' + value_str
+                amp_values.append(float(value_str))
+            except ValueError as e:
+                self.logger.warning(f"Skipping invalid amplitude value: '{value_str}' - {e}")
+                # Use previous value or a default if this is the first value
+                if amp_values:
+                    amp_values.append(amp_values[-1])
+                else:
+                    amp_values.append(-100.0)  # Default noise floor value
+        
+        amplitudes = np.array(amp_values)
         
         # Ensure arrays are same length
         if len(frequencies) != len(amplitudes):
@@ -336,7 +372,7 @@ class KeysightEXA:
         plt.colorbar(label='Amplitude (dBm)')
         plt.xlabel('Frequency (MHz)')
         plt.ylabel('Time (measurement index)')
-        plt.title(f'Waterfall Display - {config.center_freq/1e6:.1f} MHz ± {config.span/1e6:.1f} MHz')
+        plt.title(f'Waterfall Display - {config.center_freq/1e9:.1f} GHz ± {config.span/1e6:.1f} MHz')
         
         # Add timestamp labels on y-axis
         if len(timestamps) <= 20:  # Only add time labels if not too many points
@@ -437,25 +473,6 @@ def capture_spectrum_waterfall(center_freq: float, span: float, duration: float,
 
 
 if __name__ == "__main__":
-    # Example usage
-    logging.basicConfig(level=logging.INFO)
-    
-    # Test configuration - capture 2.4 GHz ISM band
-    result = capture_spectrum_waterfall(
-        center_freq=2.4e9,  # 2.4 GHz
-        span=100e6,         # 100 MHz span
-        duration=60,        # 1 minute
-        interval=1.0,       # 1 second between measurements
-        save_dir="/tmp/spectrum_data",
-        filename_prefix="ism_band",
-        rbw=1e6,           # 1 MHz RBW
-        ref_level=-20      # -20 dBm reference level
-    )
-    
-    if result["success"]:
-        print(f"Waterfall capture completed successfully!")
-        print(f"Data saved to: {result['data_file']}")
-        print(f"Plot saved to: {result['plot_file']}")
-        print(f"Statistics: {result['statistics']}")
-    else:
-        print(f"Capture failed: {result['error']}")
+    print("Use test_spectrum_analyzer.py for testing this module")
+    print("Example:")
+    print("  hatch run python test_spectrum_analyzer.py")
