@@ -44,6 +44,7 @@ class KeysightEXA:
         self.timeout = timeout
         self.socket = None
         self.logger = logging.getLogger(__name__)
+        self.initial_state = None
         
     def connect(self) -> bool:
         """
@@ -60,6 +61,10 @@ class KeysightEXA:
             # Test connection with IDN query
             idn = self.query("*IDN?")
             self.logger.info(f"Connected to: {idn}")
+            
+            # Save initial state for restoration later
+            self._save_initial_state()
+            
             return True
             
         except Exception as e:
@@ -69,6 +74,12 @@ class KeysightEXA:
     def disconnect(self):
         """Close connection to the spectrum analyzer"""
         if self.socket:
+            try:
+                # Restore analyzer to initial state before disconnecting
+                self._restore_initial_state()
+            except Exception as e:
+                self.logger.warning(f"Failed to restore initial state before disconnect: {str(e)}")
+            
             try:
                 self.socket.close()
             except:
@@ -150,6 +161,59 @@ class KeysightEXA:
         self.send("*RST")
         self.send("*CLS")  # Clear status
         time.sleep(2)  # Wait for reset to complete
+    
+    def _save_initial_state(self):
+        """Save the current analyzer state for later restoration"""
+        try:
+            self.initial_state = {
+                'instrument_mode': self.query("INST?"),
+                'center_freq': self.query("FREQ:CENT?"),
+                'span': self.query("FREQ:SPAN?"),
+                'rbw': self.query("BAND:RES?"),
+                'vbw': self.query("BAND:VID?"),
+                'sweep_time': self.query("SWE:TIME?"),
+                'ref_level': self.query("DISP:WIND:TRAC:Y:RLEV?"),
+                'attenuation': self.query("SENS:POW:RF:ATT?"),
+                'sweep_mode': self.query("INIT:CONT?"),
+                'detector': self.query("DET?"),
+                'average_state': self.query("AVER?"),
+                'average_count': self.query("AVER:COUN?")
+            }
+            self.logger.info("Initial analyzer state saved")
+        except Exception as e:
+            self.logger.warning(f"Failed to save initial state: {str(e)}")
+            self.initial_state = None
+    
+    def _restore_initial_state(self):
+        """Restore the analyzer to its initial state"""
+        if self.initial_state is None:
+            self.logger.warning("No initial state saved, performing reset instead")
+            self.reset()
+            return
+        
+        try:
+            # Restore settings in proper order
+            self.send(f"INST {self.initial_state['instrument_mode']}")
+            time.sleep(0.5)
+            
+            self.send(f"FREQ:CENT {self.initial_state['center_freq']}")
+            self.send(f"FREQ:SPAN {self.initial_state['span']}")
+            self.send(f"BAND:RES {self.initial_state['rbw']}")
+            self.send(f"BAND:VID {self.initial_state['vbw']}")
+            self.send(f"SWE:TIME {self.initial_state['sweep_time']}")
+            self.send(f"DISP:WIND:TRAC:Y:RLEV {self.initial_state['ref_level']}")
+            self.send(f"SENS:POW:RF:ATT {self.initial_state['attenuation']}")
+            self.send(f"INIT:CONT {self.initial_state['sweep_mode']}")
+            self.send(f"DET {self.initial_state['detector']}")
+            self.send(f"AVER {self.initial_state['average_state']}")
+            self.send(f"AVER:COUN {self.initial_state['average_count']}")
+            
+            self.logger.info("Analyzer restored to initial state")
+            
+        except Exception as e:
+            self.logger.error(f"Failed to restore initial state: {str(e)}")
+            # Fallback to reset if restoration fails
+            self.reset()
     
     def configure_spectrum(self, config: SpectrumConfig):
         """
@@ -366,12 +430,12 @@ class KeysightEXA:
         # Create waterfall plot
         extent = [frequencies[0]/1e6, frequencies[-1]/1e6, 0, len(timestamps)]
         
-        plt.imshow(waterfall_data, aspect='auto', origin='lower', 
+        plt.imshow(waterfall_data, aspect='auto', origin='upper', 
                   extent=extent, cmap='viridis', interpolation='nearest')
         
-        plt.colorbar(label='Amplitude (dBm)')
-        plt.xlabel('Frequency (MHz)')
-        plt.ylabel('Time (measurement index)')
+        plt.colorbar(label='Amplitude [dBm]')
+        plt.xlabel('Frequency [MHz]')
+        plt.ylabel('Time [measurement index]')
         plt.title(f'Waterfall Display - {config.center_freq/1e9:.1f} GHz ± {config.span/1e6:.1f} MHz')
         
         # Add timestamp labels on y-axis
@@ -469,7 +533,11 @@ def capture_spectrum_waterfall(center_freq: float, span: float, duration: float,
         }
     
     finally:
-        analyzer.disconnect()
+        # Always disconnect and restore state
+        try:
+            analyzer.disconnect()
+        except Exception as e:
+            logger.warning(f"Error during disconnect: {str(e)}")
 
 
 if __name__ == "__main__":
