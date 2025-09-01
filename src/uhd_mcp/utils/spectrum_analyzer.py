@@ -436,7 +436,7 @@ class KeysightEXA:
         plt.colorbar(label='Amplitude [dBm]')
         plt.xlabel('Frequency [MHz]')
         plt.ylabel('Time [measurement index]')
-        plt.title(f'Waterfall Display - {config.center_freq/1e9:.1f} GHz ± {config.span/1e6:.1f} MHz')
+        plt.title(f'Waterfall Display - {config.center_freq/1e9:.2f} GHz ± {config.span/1e6:.1f} MHz')
         
         # Add timestamp labels on y-axis
         if len(timestamps) <= 20:  # Only add time labels if not too many points
