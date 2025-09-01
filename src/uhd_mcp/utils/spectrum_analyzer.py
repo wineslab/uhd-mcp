@@ -1,198 +1,183 @@
 #!/usr/bin/env python3
 """
-Keysight N9010B EXA Signal Analyzer Remote Control Script
-Connects via Ethernet, configures frequency/bandwidth, and saves trace data
+Keysight EXA N9010B Spectrum Analyzer Control Module
+Supports waterfall display capture and frequency analysis
 """
 
 import socket
 import time
+import logging
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
-import csv
+from typing import Optional, Tuple, Dict, List
+from dataclasses import dataclass
+
+
+@dataclass
+class SpectrumConfig:
+    """Configuration for spectrum analyzer measurements"""
+    center_freq: float  # Hz
+    span: float  # Hz
+    rbw: Optional[float] = None  # Hz, resolution bandwidth
+    vbw: Optional[float] = None  # Hz, video bandwidth
+    sweep_time: Optional[float] = None  # seconds
+    ref_level: Optional[float] = None  # dBm
+    attenuation: Optional[float] = None  # dB
+
 
 class KeysightEXA:
-    def __init__(self, ip_address, port=5025, timeout=10):
+    """Keysight EXA N9010B Spectrum Analyzer Control Class"""
+    
+    def __init__(self, host: str, port: int = 5025, timeout: float = 10.0):
         """
-        Initialize connection to Keysight EXA Signal Analyzer
+        Initialize connection to Keysight EXA spectrum analyzer
         
         Args:
-            ip_address (str): IP address of the instrument
-            port (int): SCPI port (default 5025)
-            timeout (int): Socket timeout in seconds
+            host: IP address or hostname of the spectrum analyzer
+            port: SCPI port (default 5025)
+            timeout: Socket timeout in seconds
         """
-        self.ip_address = ip_address
+        self.host = host
         self.port = port
         self.timeout = timeout
         self.socket = None
-        self.connected = False
+        self.logger = logging.getLogger(__name__)
         
-    def connect(self):
-        """Establish connection to the instrument"""
+    def connect(self) -> bool:
+        """
+        Establish connection to the spectrum analyzer
+        
+        Returns:
+            True if connection successful, False otherwise
+        """
         try:
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.socket.settimeout(self.timeout)
-            self.socket.connect((self.ip_address, self.port))
-            self.connected = True
-            print(f"Connected to EXA at {self.ip_address}:{self.port}")
+            self.socket.connect((self.host, self.port))
             
-            # Get instrument identification
+            # Test connection with IDN query
             idn = self.query("*IDN?")
-            print(f"Instrument: {idn}")
+            self.logger.info(f"Connected to: {idn}")
+            return True
             
         except Exception as e:
-            print(f"Connection failed: {e}")
-            self.connected = False
-            raise
+            self.logger.error(f"Connection failed: {str(e)}")
+            return False
     
     def disconnect(self):
-        """Close connection to the instrument"""
+        """Close connection to the spectrum analyzer"""
         if self.socket:
-            self.socket.close()
-            self.connected = False
-            print("Disconnected from EXA")
+            try:
+                self.socket.close()
+            except:
+                pass
+            self.socket = None
     
-    def send_command(self, command):
-        """Send SCPI command to instrument"""
-        if not self.connected:
-            raise Exception("Not connected to instrument")
+    def send(self, command: str):
+        """
+        Send SCPI command to the analyzer
+        
+        Args:
+            command: SCPI command string
+        """
+        if not self.socket:
+            raise RuntimeError("Not connected to spectrum analyzer")
         
         try:
-            # Add termination character
-            cmd = command + '\n'
-            self.socket.send(cmd.encode())
-            time.sleep(0.1)  # Small delay for command processing
+            cmd_bytes = (command + '\n').encode('utf-8')
+            self.socket.send(cmd_bytes)
+            self.logger.debug(f"Sent: {command}")
         except Exception as e:
-            print(f"Error sending command '{command}': {e}")
+            self.logger.error(f"Send error: {str(e)}")
             raise
     
-    def query(self, command):
-        """Send query and return response"""
-        if not self.connected:
-            raise Exception("Not connected to instrument")
-        
-        try:
-            # Send query
-            cmd = command + '\n'
-            self.socket.send(cmd.encode())
-            
-            # Receive response - increase buffer size for trace data
-            response = b""
-            while True:
-                try:
-                    chunk = self.socket.recv(8192)
-                    if not chunk:
-                        break
-                    response += chunk
-                    # Check if we have a complete response (ends with newline)
-                    if response.endswith(b'\n'):
-                        break
-                except socket.timeout:
-                    if response:  # We got some data
-                        break
-                    else:
-                        raise
-            
-            return response.decode().strip()
-            
-        except Exception as e:
-            print(f"Error querying '{command}': {e}")
-            raise
-    
-    def reset(self):
-        """Reset instrument to default state"""
-        self.send_command("*RST")
-        self.send_command("*CLS")  # Clear error queue
-        time.sleep(2)  # Wait for reset to complete
-        print("Instrument reset")
-    
-    def set_center_frequency(self, freq_hz):
+    def receive(self, buffer_size: int = 4096) -> str:
         """
-        Set center frequency
+        Receive response from the analyzer
         
         Args:
-            freq_hz (float): Center frequency in Hz
-        """
-        self.send_command(f"FREQ:CENT {freq_hz}")
-        actual_freq = float(self.query("FREQ:CENT?"))
-        print(f"Center frequency set to: {actual_freq/1e6:.3f} MHz")
-        
-    def set_span(self, span_hz):
-        """
-        Set frequency span (bandwidth)
-        
-        Args:
-            span_hz (float): Frequency span in Hz
-        """
-        self.send_command(f"FREQ:SPAN {span_hz}")
-        actual_span = float(self.query("FREQ:SPAN?"))
-        print(f"Frequency span set to: {actual_span/1e6:.3f} MHz")
-    
-    def set_resolution_bandwidth(self, rbw_hz):
-        """
-        Set resolution bandwidth
-        
-        Args:
-            rbw_hz (float): Resolution bandwidth in Hz
-        """
-        self.send_command(f"BAND:RES {rbw_hz}")
-        actual_rbw = float(self.query("BAND:RES?"))
-        print(f"Resolution bandwidth set to: {actual_rbw/1e3:.1f} kHz")
-    
-    def set_video_bandwidth(self, vbw_hz):
-        """
-        Set video bandwidth
-        
-        Args:
-            vbw_hz (float): Video bandwidth in Hz
-        """
-        self.send_command(f"BAND:VID {vbw_hz}")
-        actual_vbw = float(self.query("BAND:VID?"))
-        print(f"Video bandwidth set to: {actual_vbw/1e3:.1f} kHz")
-    
-    def set_reference_level(self, ref_level_dbm):
-        """
-        Set reference level
-        
-        Args:
-            ref_level_dbm (float): Reference level in dBm
-        """
-        self.send_command(f"DISP:WIND:TRAC:Y:RLEV {ref_level_dbm}")
-        actual_ref = float(self.query("DISP:WIND:TRAC:Y:RLEV?"))
-        print(f"Reference level set to: {actual_ref:.1f} dBm")
-    
-    def set_sweep_points(self, points):
-        """
-        Set number of sweep points
-        
-        Args:
-            points (int): Number of sweep points
-        """
-        self.send_command(f"SWE:POIN {points}")
-        actual_points = int(self.query("SWE:POIN?"))
-        print(f"Sweep points set to: {actual_points}")
-    
-    def trigger_sweep(self):
-        """Trigger a single sweep and wait for completion"""
-        self.send_command("INIT:CONT OFF")  # Single sweep mode
-        self.send_command("INIT:IMM")       # Trigger sweep
-        
-        # Wait for sweep to complete by checking operation complete
-        self.send_command("*OPC?")          # Query operation complete
-        opc_response = self.query("*OPC?")  # Wait for response
-        
-        print("Sweep completed")
-    
-    def get_trace_data(self, trace=1):
-        """
-        Get trace data from the analyzer
-        
-        Args:
-            trace (int): Trace number (1-4)
+            buffer_size: Maximum bytes to receive
             
         Returns:
-            tuple: (frequencies, amplitudes) in Hz and dBm
+            Response string
         """
+        if not self.socket:
+            raise RuntimeError("Not connected to spectrum analyzer")
+        
+        try:
+            response = self.socket.recv(buffer_size).decode('utf-8').strip()
+            self.logger.debug(f"Received: {response}")
+            return response
+        except Exception as e:
+            self.logger.error(f"Receive error: {str(e)}")
+            raise
+    
+    def query(self, command: str, buffer_size: int = 8192) -> str:
+        """
+        Send command and receive response
+        
+        Args:
+            command: SCPI query command
+            buffer_size: Maximum bytes to receive
+            
+        Returns:
+            Response string
+        """
+        self.send(command)
+        return self.receive(buffer_size)
+    
+    def reset(self):
+        """Reset the analyzer to default state"""
+        self.send("*RST")
+        self.send("*CLS")  # Clear status
+        time.sleep(2)  # Wait for reset to complete
+    
+    def configure_spectrum(self, config: SpectrumConfig):
+        """
+        Configure spectrum analyzer for measurement
+        
+        Args:
+            config: SpectrumConfig object with measurement parameters
+        """
+        # Set to spectrum analyzer mode
+        self.send("INST SA")
+        
+        # Set center frequency and span
+        self.send(f"FREQ:CENT {config.center_freq}")
+        self.send(f"FREQ:SPAN {config.span}")
+        
+        # Set optional parameters if provided
+        if config.rbw is not None:
+            self.send(f"BAND:RES {config.rbw}")
+        
+        if config.vbw is not None:
+            self.send(f"BAND:VID {config.vbw}")
+        
+        if config.sweep_time is not None:
+            self.send(f"SWE:TIME {config.sweep_time}")
+        
+        if config.ref_level is not None:
+            self.send(f"DISP:WIND:TRAC:Y:RLEV {config.ref_level}")
+        
+        if config.attenuation is not None:
+            self.send(f"SENS:POW:RF:ATT {config.attenuation}")
+        
+        self.logger.info(f"Configured spectrum analyzer: {config.center_freq/1e6:.3f} MHz ± {config.span/1e6:.3f} MHz")
+    
+    def get_trace_data(self) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Get current trace data (frequency and amplitude)
+        
+        Returns:
+            Tuple of (frequencies, amplitudes) arrays
+        """
+        # Trigger a single sweep
+        self.send("INIT:CONT OFF")  # Single sweep mode
+        self.send("INIT:IMM")       # Trigger sweep
+        self.send("*WAI")           # Wait for sweep to complete
+        
         # Get current analyzer settings to calculate frequency array
         center_freq = float(self.query("FREQ:CENT?"))
         span = float(self.query("FREQ:SPAN?"))
@@ -203,141 +188,274 @@ class KeysightEXA:
         stop_freq = center_freq + span/2
         frequencies = np.linspace(start_freq, stop_freq, num_points)
         
-        # Get amplitude data for specified trace
-        # Try different trace data query formats
+        # Get amplitude data - try different query formats
         try:
-            amp_data = self.query(f"TRAC:DATA? TRACE{trace}")
+            amp_data = self.query("TRAC:DATA? TRACE1", buffer_size=65536)
         except:
             try:
-                amp_data = self.query(f"TRAC{trace}:DATA?")
+                amp_data = self.query("TRAC1:DATA?", buffer_size=65536)
             except:
-                # Fallback to basic trace query
-                amp_data = self.query("TRAC:DATA?")
+                amp_data = self.query("TRAC:DATA?", buffer_size=65536)
         
         amplitudes = np.array([float(x) for x in amp_data.split(',')])
         
         # Ensure arrays are same length
         if len(frequencies) != len(amplitudes):
-            print(f"Warning: Frequency points ({len(frequencies)}) != Amplitude points ({len(amplitudes)})")
             min_len = min(len(frequencies), len(amplitudes))
             frequencies = frequencies[:min_len]
             amplitudes = amplitudes[:min_len]
         
         return frequencies, amplitudes
     
-    def save_trace_csv(self, filename, trace=1):
+    def capture_waterfall(self, config: SpectrumConfig, duration: float, 
+                         interval: float, save_dir: str, 
+                         filename_prefix: str = "waterfall") -> Dict:
         """
-        Save trace data to CSV file
+        Capture waterfall display over time
         
         Args:
-            filename (str): Output filename
-            trace (int): Trace number to save
+            config: SpectrumConfig for measurement setup
+            duration: Total capture duration in seconds
+            interval: Time between measurements in seconds
+            save_dir: Directory to save waterfall data
+            filename_prefix: Prefix for saved files
+            
+        Returns:
+            Dictionary with capture results and file paths
         """
+        # Configure the analyzer
+        self.configure_spectrum(config)
+        
+        # Calculate number of measurements
+        num_measurements = int(duration / interval)
+        
+        # Storage for waterfall data
+        waterfall_data = []
+        timestamps = []
+        frequencies = None
+        
+        self.logger.info(f"Starting waterfall capture: {num_measurements} measurements over {duration}s")
+        
+        start_time = time.time()
+        
         try:
-            frequencies, amplitudes = self.get_trace_data(trace)
+            for i in range(num_measurements):
+                measurement_time = datetime.now()
+                
+                # Get trace data
+                freqs, amps = self.get_trace_data()
+                
+                if frequencies is None:
+                    frequencies = freqs
+                
+                waterfall_data.append(amps)
+                timestamps.append(measurement_time)
+                
+                self.logger.debug(f"Captured measurement {i+1}/{num_measurements}")
+                
+                # Wait for next measurement (accounting for measurement time)
+                elapsed = time.time() - start_time - (i * interval)
+                sleep_time = interval - elapsed
+                if sleep_time > 0:
+                    time.sleep(sleep_time)
             
-            with open(filename, 'w', newline='') as csvfile:
-                writer = csv.writer(csvfile)
-                writer.writerow(['Frequency (Hz)', 'Amplitude (dBm)'])
-                for freq, amp in zip(frequencies, amplitudes):
-                    writer.writerow([freq, amp])
+            # Convert to numpy arrays
+            waterfall_array = np.array(waterfall_data)
             
-            print(f"Trace data saved to: {filename}")
-            return frequencies, amplitudes
+            # Create output directory
+            os.makedirs(save_dir, exist_ok=True)
+            
+            # Generate timestamp for filenames
+            timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+            
+            # Save raw data
+            data_filename = f"{filename_prefix}_{timestamp_str}_data.npz"
+            data_path = os.path.join(save_dir, data_filename)
+            
+            np.savez(data_path,
+                    frequencies=frequencies,
+                    amplitudes=waterfall_array,
+                    timestamps=[t.isoformat() for t in timestamps],
+                    config=config.__dict__)
+            
+            # Create waterfall plot
+            plot_filename = f"{filename_prefix}_{timestamp_str}_plot.png"
+            plot_path = os.path.join(save_dir, plot_filename)
+            
+            self._create_waterfall_plot(frequencies, waterfall_array, timestamps, 
+                                      config, plot_path)
+            
+            # Create summary statistics
+            stats = {
+                "center_frequency_mhz": config.center_freq / 1e6,
+                "span_mhz": config.span / 1e6,
+                "duration_seconds": duration,
+                "num_measurements": num_measurements,
+                "min_amplitude_dbm": float(np.min(waterfall_array)),
+                "max_amplitude_dbm": float(np.max(waterfall_array)),
+                "mean_amplitude_dbm": float(np.mean(waterfall_array)),
+                "frequency_range_mhz": [float(frequencies[0]/1e6), float(frequencies[-1]/1e6)]
+            }
+            
+            return {
+                "success": True,
+                "data_file": data_path,
+                "plot_file": plot_path,
+                "statistics": stats,
+                "capture_duration": time.time() - start_time
+            }
             
         except Exception as e:
-            print(f"Error saving trace data: {e}")
-            raise
+            self.logger.error(f"Waterfall capture failed: {str(e)}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
     
-    def plot_trace(self, frequencies, amplitudes, title="Spectrum"):
+    def _create_waterfall_plot(self, frequencies: np.ndarray, waterfall_data: np.ndarray,
+                              timestamps: List[datetime], config: SpectrumConfig, 
+                              output_path: str):
         """
-        Plot trace data
+        Create and save waterfall plot
         
         Args:
-            frequencies (array): Frequency data in Hz
-            amplitudes (array): Amplitude data in dBm
-            title (str): Plot title
+            frequencies: Frequency array
+            waterfall_data: 2D array of amplitude data
+            timestamps: List of measurement timestamps
+            config: SpectrumConfig used for measurement
+            output_path: Path to save plot
         """
-        plt.figure(figsize=(12, 6))
-        plt.plot(frequencies/1e6, amplitudes, 'b-', linewidth=1)
+        plt.figure(figsize=(12, 8))
+        
+        # Create waterfall plot
+        extent = [frequencies[0]/1e6, frequencies[-1]/1e6, 0, len(timestamps)]
+        
+        plt.imshow(waterfall_data, aspect='auto', origin='lower', 
+                  extent=extent, cmap='viridis', interpolation='nearest')
+        
+        plt.colorbar(label='Amplitude (dBm)')
         plt.xlabel('Frequency (MHz)')
-        plt.ylabel('Amplitude (dBm)')
-        plt.title(title)
+        plt.ylabel('Time (measurement index)')
+        plt.title(f'Waterfall Display - {config.center_freq/1e6:.1f} MHz ± {config.span/1e6:.1f} MHz')
+        
+        # Add timestamp labels on y-axis
+        if len(timestamps) <= 20:  # Only add time labels if not too many points
+            time_labels = [t.strftime("%H:%M:%S") for t in timestamps[::max(1, len(timestamps)//10)]]
+            plt.yticks(range(0, len(timestamps), max(1, len(timestamps)//10)), time_labels)
+        
         plt.grid(True, alpha=0.3)
         plt.tight_layout()
-        plt.show()
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        plt.close()
+        
+        self.logger.info(f"Waterfall plot saved to: {output_path}")
 
-def main():
-    """Main function demonstrating EXA control"""
+
+def get_analyzer_config() -> Dict[str, str]:
+    """
+    Get spectrum analyzer connection configuration from environment variables
     
-    # Configuration
-    INSTRUMENT_IP = "10.101.209.51" 
-    CENTER_FREQ = 2.4e9              # 2.4 GHz
-    SPAN = 100e6                     # 100 MHz
-    RBW = 1e6                        # 1 MHz
-    VBW = 3e6                        # 3 MHz
-    REF_LEVEL = 0                    # 0 dBm
-    SWEEP_POINTS = 1001              # Number of points
+    Returns:
+        Dict with host, port, and timeout configuration
+    """
+    return {
+        "host": os.environ.get("SA_HOST", "10.101.209.51"),
+        "port": int(os.environ.get("SA_PORT", "5025")),
+        "timeout": float(os.environ.get("SA_TIMEOUT", "10.0"))
+    }
+
+
+def capture_spectrum_waterfall(center_freq: float, span: float, duration: float,
+                              interval: float, save_dir: str, 
+                              filename_prefix: str = "waterfall",
+                              rbw: Optional[float] = None,
+                              ref_level: Optional[float] = None) -> Dict:
+    """
+    High-level function to capture spectrum waterfall
     
-    # Create timestamp for filename
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    csv_filename = f"exa_trace_{timestamp}.csv"
+    Args:
+        center_freq: Center frequency in Hz
+        span: Frequency span in Hz
+        duration: Total capture duration in seconds
+        interval: Time between measurements in seconds
+        save_dir: Directory to save results
+        filename_prefix: Prefix for output files
+        rbw: Resolution bandwidth in Hz (optional)
+        ref_level: Reference level in dBm (optional)
+        
+    Returns:
+        Dictionary with capture results
+    """
+    logger = logging.getLogger(__name__)
+    
+    # Get analyzer configuration
+    analyzer_config = get_analyzer_config()
+    
+    # Create spectrum configuration
+    spec_config = SpectrumConfig(
+        center_freq=center_freq,
+        span=span,
+        rbw=rbw,
+        ref_level=ref_level
+    )
+    
+    # Initialize analyzer
+    analyzer = KeysightEXA(
+        host=analyzer_config["host"],
+        port=analyzer_config["port"],
+        timeout=analyzer_config["timeout"]
+    )
     
     try:
-        # Connect to instrument
-        exa = KeysightEXA(INSTRUMENT_IP)
-        exa.connect()
+        # Connect to analyzer
+        if not analyzer.connect():
+            return {
+                "success": False,
+                "error": "Failed to connect to spectrum analyzer"
+            }
         
-        # Test basic communication
-        print("Testing communication...")
-        print(f"Instrument ID: {exa.query('*IDN?')}")
+        # Capture waterfall
+        result = analyzer.capture_waterfall(
+            config=spec_config,
+            duration=duration,
+            interval=interval,
+            save_dir=save_dir,
+            filename_prefix=filename_prefix
+        )
         
-        # Configure instrument
-        print("\nConfiguring instrument...")
-        exa.reset()
-        
-        # Wait after reset
-        time.sleep(3)
-        
-        # Set instrument to spectrum analyzer mode
-        exa.send_command("INST:SEL SA")  # Select spectrum analyzer mode
-        
-        exa.set_center_frequency(CENTER_FREQ)
-        exa.set_span(SPAN)
-        exa.set_resolution_bandwidth(RBW)
-        exa.set_video_bandwidth(VBW)
-        exa.set_reference_level(REF_LEVEL)
-        exa.set_sweep_points(SWEEP_POINTS)
-        
-        # Perform measurement
-        print("\nPerforming measurement...")
-        exa.trigger_sweep()
-        
-        # Save and plot data
-        print("\nSaving trace data...")
-        frequencies, amplitudes = exa.save_trace_csv(csv_filename)
-        
-        # Plot the results
-        title = f"EXA Spectrum - {CENTER_FREQ/1e6:.1f} MHz ± {SPAN/2e6:.1f} MHz"
-        exa.plot_trace(frequencies, amplitudes, title)
-        
-        print(f"\nMeasurement complete!")
-        print(f"Center: {CENTER_FREQ/1e6:.1f} MHz")
-        print(f"Span: {SPAN/1e6:.1f} MHz")
-        print(f"Points: {len(frequencies)}")
-        print(f"Data saved to: {csv_filename}")
+        return result
         
     except Exception as e:
-        print(f"Error: {e}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Waterfall capture error: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
     
     finally:
-        # Always disconnect
-        try:
-            exa.disconnect()
-        except:
-            pass
+        analyzer.disconnect()
+
 
 if __name__ == "__main__":
-    main()
+    # Example usage
+    logging.basicConfig(level=logging.INFO)
+    
+    # Test configuration - capture 2.4 GHz ISM band
+    result = capture_spectrum_waterfall(
+        center_freq=2.4e9,  # 2.4 GHz
+        span=100e6,         # 100 MHz span
+        duration=60,        # 1 minute
+        interval=1.0,       # 1 second between measurements
+        save_dir="/tmp/spectrum_data",
+        filename_prefix="ism_band",
+        rbw=1e6,           # 1 MHz RBW
+        ref_level=-20      # -20 dBm reference level
+    )
+    
+    if result["success"]:
+        print(f"Waterfall capture completed successfully!")
+        print(f"Data saved to: {result['data_file']}")
+        print(f"Plot saved to: {result['plot_file']}")
+        print(f"Statistics: {result['statistics']}")
+    else:
+        print(f"Capture failed: {result['error']}")

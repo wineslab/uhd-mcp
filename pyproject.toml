@@ -29,6 +29,8 @@ dependencies = [
   "aiohttp>=3.8.0",
   "vncdotool>=1.2.0",
   "Pillow>=9.0.0",
+  "matplotlib>=3.5.0",
+  "numpy>=1.20.0",
 ]
 
 [project.urls]
