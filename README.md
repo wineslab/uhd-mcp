@@ -57,11 +57,11 @@ hatch env create dev
 hatch -e dev shell
 ```
 
-See `hatch_commands.md` for comprehensive Hatch usage.
+See `docs/hatch_commands.md` for comprehensive Hatch usage.
 
 ## Usage Examples
 
-See `example_commands.md` for detailed usage examples.
+See `docs/example_commands.md` for detailed usage examples.
 
 ## Safety
 
@@ -69,18 +69,6 @@ See `example_commands.md` for detailed usage examples.
 - Command execution timeouts prevent hanging
 - Process cleanup on server shutdown
 - Always verify frequency allocations comply with local regulations
-
-## Files
-
-- `src/uhd_mcp/usrp_mcp_server.py` - Main MCP server module
-- `src/uhd_mcp/__init__.py` - Package initialization
-- `test_usrp_client.py` - Test client for verification
-- `setup_usrp.sh` - Initial setup script
-- `quick_start.sh` - Quick server startup
-- `pyproject.toml` - Hatch project configuration
-- `example_commands.md` - Usage examples
-- `hatch_commands.md` - Hatch development guide
-- `claude_config.json` - Claude Desktop configuration example
 
 ## License
 
