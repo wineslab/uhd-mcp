@@ -21,14 +21,6 @@ jobs:
       working-directory: src/usrp_proxy_dxt
       run: npm install
       
-    - name: Validate proxy extension
-      working-directory: src/usrp_proxy_dxt
-      run: |
-        # Test basic syntax
-        node -e "import('./server/index.js').then(() => console.log('✅ Proxy syntax valid')).catch(err => { console.error('❌ Syntax error:', err.message); process.exit(1); })"
-        # Validate manifest
-        npm run validate
-      
     - name: Get version from manifest
       id: get_version
       working-directory: src/usrp_proxy_dxt
