@@ -31,12 +31,11 @@ jobs:
         
     - name: Create proxy package
       run: |
-        mkdir -p proxy-package/usrp-proxy-dxt
-        cp -r src/usrp_proxy_dxt/* proxy-package/usrp-proxy-dxt/
-        rm -rf proxy-package/usrp-proxy-dxt/node_modules
-        rm -f proxy-package/usrp-proxy-dxt/package-lock.json
-        rm -f proxy-package/usrp-proxy-dxt/.DS_Store
-        cd proxy-package/usrp-proxy-dxt
+        cd src/usrp_proxy_dxt
+        npm pack
+        mkdir -p ../../proxy-package
+        tar -xzf *.tgz -C ../../proxy-package
+        cd ../../proxy-package/package
         npm install --omit=dev --no-package-lock
       
     - name: Create package documentation
@@ -56,7 +55,7 @@ jobs:
         
     - name: Add build metadata
       run: |
-        cat > proxy-package/usrp-proxy-dxt/build-info.json << EOF
+        cat > proxy-package/package/build-info.json << EOF
         {
           "version": "${{ steps.get_version.outputs.version }}",
           "build_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
