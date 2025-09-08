@@ -17,9 +17,9 @@ jobs:
       with:
         node-version: '20'
         
-    - name: Install dependencies
+    - name: Install dependencies and dev tools
       working-directory: src/usrp_proxy_dxt
-      run: npm install
+      run: npm install --include=dev
       
     - name: Get version from manifest
       id: get_version

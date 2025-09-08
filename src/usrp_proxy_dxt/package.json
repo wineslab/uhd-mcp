@@ -10,8 +10,9 @@
     "test": "node test.js",
     "setup": "./dev-setup.sh",
     "validate": "node -e \"console.log('✅ Manifest valid:', JSON.parse(require('fs').readFileSync('manifest.json', 'utf8')).name)\"",
-    "pack": "dxt pack .",
-    "clean": "rm -rf node_modules package-lock.json",
+    "pack": "npx dxt pack .",
+    "build": "npm install --production && npx dxt pack .",
+    "clean": "rm -rf node_modules package-lock.json *.dxt",
     "update-version": "node update-version.js"
   },
   "keywords": [
@@ -21,11 +22,14 @@
     "proxy",
     "dxt"
   ],
-  "author": "UHD MCP Developer",
-  "license": "MIT",
+  "author": "Andrea Lacava",
+  "license": "All rights reserved",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.16.0",
     "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "@anthropic-ai/dxt": "latest"
   },
   "engines": {
     "node": ">=16.0.0"
