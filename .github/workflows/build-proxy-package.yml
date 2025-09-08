@@ -32,7 +32,7 @@ jobs:
     - name: Create proxy package
       run: |
         cd src/usrp_proxy_dxt
-        dxt pack .
+        npx dxt pack .
         mv *.dxt ../../usrp-proxy-dxt-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.dxt
         
     - name: Generate package checksums
