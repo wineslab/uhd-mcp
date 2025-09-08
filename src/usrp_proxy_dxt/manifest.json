@@ -4,8 +4,8 @@
   "display_name": "USRP MCP Proxy",
   "icon": "icon.png",
   "version": "0.0.1",
-  "description": "Local MCP proxy for remote USRP MCP server with software-defined radio capabilities",
-  "long_description": "This extension provides a local MCP proxy that connects to a remote USRP MCP server, enabling Claude Desktop to control software-defined radio equipment via UHD tools. Features comprehensive signal generation with 25+ parameters, GNU Radio integration for data capture, background process management, and professional logging. Includes device discovery, hardware probing, and complete radio hardware management through a clean MCP interface.",
+  "description": "Local MCP proxy for remote USRP MCP server with spectrum analyzer and SDR capabilities",
+  "long_description": "This extension provides a local MCP proxy that connects to a remote USRP MCP server, enabling Claude Desktop to control software-defined radio equipment and spectrum analyzers. Features comprehensive signal generation with 25+ parameters, GNU Radio integration for data capture, spectrum waterfall analysis from Keysight EXA analyzers, background process management, and professional logging. Includes device discovery, hardware probing, spectrum analysis, and complete radio hardware management through a clean MCP interface.",
   "author": {
     "name": "Andrea Lacava",
     "email": "thecave003@gmail.com"
@@ -13,7 +13,7 @@
   "homepage": "https://github.com/wineslab/uhd-mcp",
   "documentation": "https://github.com/wineslab/uhd-mcp/blob/main/README.md",
   "support": "https://github.com/wineslab/uhd-mcp/issues",
-  "keywords": ["sdr", "usrp", "radio", "uhd", "mcp", "proxy", "wireless"],
+  "keywords": ["sdr", "usrp", "radio", "uhd", "mcp", "proxy", "wireless", "spectrum", "analyzer", "keysight", "waterfall"],
   "license": "MIT",
   "server": {
     "type": "node",
@@ -47,7 +47,11 @@
     },
     {
       "name": "list_shared_files",
-      "description": "List all files in the shared data directory (captures, screenshots, etc.)"
+      "description": "List all files in the shared data directory (captures, waterfall plots, data files, etc.)"
+    },
+    {
+      "name": "capture_spectrum_waterfall",
+      "description": "Capture spectrum waterfall from Keysight EXA spectrum analyzer with configurable parameters"
     },
     {
       "name": "get_uhd_info",
@@ -64,11 +68,8 @@
     {
       "name": "cleanup_all_processes",
       "description": "Stop all running UHD background processes"
-    },
-    {
-      "name": "vnc_screenshot",
-      "description": "Take a screenshot from the configured VNC server"
     }
+
   ],
   "tools_generated": false,
   "compatibility": {

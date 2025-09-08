@@ -1,0 +1,214 @@
+name: Build and Package USRP Proxy Extension
+
+on:
+  push:
+    branches: [ first-it ]
+
+jobs:
+  build-proxy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        
+    - name: Install dependencies
+      working-directory: src/usrp_proxy_dxt
+      run: npm install
+      
+    - name: Validate proxy extension
+      working-directory: src/usrp_proxy_dxt
+      run: |
+        # Test basic syntax
+        node -e "import('./server/index.js').then(() => console.log('✅ Proxy syntax valid')).catch(err => { console.error('❌ Syntax error:', err.message); process.exit(1); })"
+        # Validate manifest
+        npm run validate
+      
+    - name: Get version from manifest
+      id: get_version
+      working-directory: src/usrp_proxy_dxt
+      run: |
+        VERSION=$(node -e "console.log(JSON.parse(require('fs').readFileSync('manifest.json', 'utf8')).version)")
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Package version: $VERSION"
+        
+    - name: Create proxy package
+      run: |
+        # Create package directory
+        mkdir -p proxy-package/usrp-proxy-dxt
+        
+        # Copy all proxy files
+        cp -r src/usrp_proxy_dxt/* proxy-package/usrp-proxy-dxt/
+        
+        # Clean up development files
+        rm -rf proxy-package/usrp-proxy-dxt/node_modules
+        rm -f proxy-package/usrp-proxy-dxt/package-lock.json
+        rm -f proxy-package/usrp-proxy-dxt/.DS_Store
+        
+        # Install only production dependencies
+        cd proxy-package/usrp-proxy-dxt
+        npm install --omit=dev --no-package-lock
+      
+    - name: Create package documentation
+      run: |
+        # Create package README
+        cat > proxy-package/README.md << 'EOF'
+        # 🚀 USRP MCP Proxy Desktop Extension
+        
+        **Latest Version with Spectrum Analyzer Support!**
+        
+        This package contains the USRP MCP Proxy Desktop Extension for Claude Desktop, enabling direct control of software-defined radio equipment and spectrum analyzers from Claude Desktop.
+        
+        ## ✨ What's New in This Version
+        
+        - 📡 **Keysight EXA Spectrum Analyzer Support** - Capture waterfall plots and analyze RF spectrum
+        - 🔧 **Enhanced USRP Control** - Complete UHD tool integration with 25+ signal generation parameters
+        - 🗂️ **Improved File Management** - Better shared data directory handling
+        - ⚡ **Optimized Performance** - Faster response times and better error handling
+        - ❌ **Removed VNC** - Replaced with more useful spectrum analyzer functionality
+        
+        ## 🚀 Quick Installation
+        
+        1. **Extract** this package to your desired location (e.g., `~/usrp-proxy-dxt/`)
+        2. **Read** the detailed installation guide in `usrp-proxy-dxt/INSTALL.md`
+        3. **Configure** Claude Desktop to use this extension
+        4. **Enjoy** advanced RF control capabilities!
+        
+        ## 📋 Version Information
+        
+        - **Version:** ${{ steps.get_version.outputs.version }}
+        - **Build Number:** ${{ github.run_number }}
+        - **Git Commit:** ${{ github.sha }}
+        - **Source Branch:** ${{ github.ref_name }}
+        - **Build Date:** $(date -u +%Y-%m-%d\ %H:%M:%S\ UTC)
+        - **Spectrum Analyzer:** ✅ Enabled (Keysight EXA N9010B)
+        - **VNC Support:** ❌ Removed (replaced with spectrum analyzer)
+        
+        ## 🛠️ Available MCP Tools
+        
+        ### 📡 **RF & Spectrum Analysis**
+        - `capture_spectrum_waterfall` - **NEW!** Capture spectrum waterfall plots from Keysight EXA analyzer
+        - `uhd_siggen` - Generate signals with USRP (25+ configurable parameters)
+        - `uhd_rx_cfile` - Receive and save RF data using GNU Radio
+        
+        ### 🔍 **Device Management**  
+        - `uhd_find_devices` - Discover all connected USRP devices
+        - `uhd_usrp_probe` - Get detailed hardware information from USRP devices
+        - `get_uhd_info` - Retrieve UHD installation and configuration details
+        
+        ### 📂 **File & Process Management**
+        - `list_shared_files` - List all files in shared data directory (captures, plots, etc.)
+        - `list_processes` - View all running UHD background processes
+        - `stop_process` - Stop specific UHD background processes
+        - `cleanup_all_processes` - Stop all UHD background processes
+        
+        ## 🏗️ System Requirements
+        
+        - **Node.js:** >= 16.0.0
+        - **Claude Desktop:** >= 0.12.0
+        - **Platforms:** Windows, macOS, Linux
+        - **Network:** Access to remote USRP MCP server
+        
+        ## 📚 Documentation & Support
+        
+        - **Installation Guide:** See `usrp-proxy-dxt/INSTALL.md`
+        - **Project Repository:** [GitHub - wineslab/uhd-mcp](https://github.com/wineslab/uhd-mcp)
+        - **Issue Tracker:** [GitHub Issues](https://github.com/wineslab/uhd-mcp/issues)
+        - **Documentation:** [Project README](https://github.com/wineslab/uhd-mcp/blob/main/README.md)
+        
+        ## 🔐 Package Verification
+        
+        This package includes SHA256 checksums for integrity verification. See `checksums.txt` for file hashes.
+        
+        ---
+        
+        **Built with ❤️ by Andrea Lacava**
+        EOF
+        
+    - name: Add build metadata
+      run: |
+        # Add version info to package
+        cat > proxy-package/usrp-proxy-dxt/build-info.json << EOF
+        {
+          "version": "${{ steps.get_version.outputs.version }}",
+          "build_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+          "git_commit": "${{ github.sha }}",
+          "git_branch": "${{ github.ref_name }}",
+          "build_number": "${{ github.run_number }}",
+          "spectrum_analyzer": true,
+          "vnc_support": false
+        }
+        EOF
+        
+    - name: Create distribution packages
+      run: |
+        # Create tar.gz for Linux/macOS
+        cd proxy-package
+        tar -czf ../usrp-proxy-dxt-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.tar.gz .
+        cd ..
+        
+        # Create zip for Windows  
+        zip -r usrp-proxy-dxt-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.zip proxy-package/
+        
+    - name: Generate package checksums
+      run: |
+        sha256sum usrp-proxy-dxt-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.tar.gz > checksums.txt
+        sha256sum usrp-proxy-dxt-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.zip >> checksums.txt
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: usrp-proxy-dxt-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}
+        path: |
+          usrp-proxy-dxt-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.tar.gz
+          usrp-proxy-dxt-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.zip
+          checksums.txt
+        retention-days: 90
+        
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: proxy-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}
+        name: USRP Proxy Extension v${{ steps.get_version.outputs.version }} (Build ${{ github.run_number }})
+        body: |
+          ## 🚀 USRP MCP Proxy Desktop Extension
+          
+          **📦 Version:** ${{ steps.get_version.outputs.version }}  
+          **🔢 Build:** ${{ github.run_number }}  
+          **🔗 Commit:** ${{ github.sha }}  
+          **🌿 Branch:** ${{ github.ref_name }}  
+          
+          ### ✨ Features
+          - 📡 **Spectrum Analyzer Support** - Capture waterfall plots from Keysight EXA
+          - 🔧 **USRP Control** - Full UHD tool integration
+          - 🗂️ **File Management** - Shared data directory access
+          - ⚡ **Real-time Communication** - MCP proxy for Claude Desktop
+          
+          ### 📥 Downloads
+          - **Linux/macOS:** `usrp-proxy-dxt-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.tar.gz`
+          - **Windows:** `usrp-proxy-dxt-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.zip`
+          - **Checksums:** `checksums.txt`
+          
+          ### 🛠️ Available Tools
+          - `capture_spectrum_waterfall` - Spectrum analyzer waterfall capture
+          - `uhd_find_devices` - Find connected USRP devices  
+          - `uhd_usrp_probe` - Probe USRP device details
+          - `uhd_siggen` - Generate signals with USRP
+          - `uhd_rx_cfile` - Receive and save RF data
+          - `list_shared_files` - List shared data files
+          
+        files: |
+          usrp-proxy-dxt-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.tar.gz
+          usrp-proxy-dxt-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.zip
+          checksums.txt
+        draft: false
+        prerelease: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+
