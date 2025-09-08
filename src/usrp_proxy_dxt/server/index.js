@@ -534,16 +534,41 @@ class USRPProxyServer {
             },
           },
           {
-            name: "vnc_screenshot",
-            description: "Take a screenshot from the configured VNC server and save it in the shared data directory.",
+            name: "capture_spectrum_waterfall",
+            description: "Capture spectrum waterfall from Keysight EXA spectrum analyzer and save data/plot files in the shared data directory.",
             inputSchema: {
               type: "object",
               properties: {
-                filename: {
+                center_freq: {
+                  type: "number",
+                  description: "Center frequency in Hz (e.g., 2.4e9 for 2.4 GHz)",
+                },
+                span: {
+                  type: "number", 
+                  description: "Frequency span in Hz (e.g., 100e6 for 100 MHz)",
+                },
+                duration: {
+                  type: "number",
+                  description: "Total capture duration in seconds",
+                },
+                interval: {
+                  type: "number",
+                  description: "Time between measurements in seconds",
+                },
+                filename_prefix: {
                   type: "string",
-                  description: "Optional filename for the screenshot (default: vncshot_TIMESTAMP.png)",
+                  description: "Prefix for output files (default: 'waterfall')",
+                },
+                rbw: {
+                  type: "number",
+                  description: "Resolution bandwidth in Hz (optional)",
+                },
+                ref_level: {
+                  type: "number", 
+                  description: "Reference level in dBm (optional)",
                 },
               },
+              required: ["center_freq", "span", "duration", "interval"],
             },
           },
         ],

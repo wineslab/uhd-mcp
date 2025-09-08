@@ -17,7 +17,7 @@ from .utils import (
     parse_uhd_find_devices_output, 
     parse_uhd_config_info_output,
     get_shared_data_dir,
-    take_vnc_screenshot
+    capture_spectrum_waterfall
 )
 
 # Create the MCP server
@@ -802,15 +802,29 @@ def get_uhd_info() -> str:
         return f"Error getting UHD info: {str(e)}"
 
 @mcp.tool()
-def vnc_screenshot(filename: Optional[str] = None) -> str:
+def capture_spectrum_waterfall(
+    center_freq: float,
+    span: float, 
+    duration: float,
+    interval: float,
+    filename_prefix: str = "waterfall",
+    rbw: Optional[float] = None,
+    ref_level: Optional[float] = None
+) -> str:
     """
-    Take a screenshot from the configured VNC server and save it in the shared data directory
+    Capture spectrum waterfall from Keysight EXA spectrum analyzer
     
     Args:
-        filename: Optional filename for the screenshot (default: vncshot_TIMESTAMP.png)
+        center_freq: Center frequency in Hz (e.g., 2.4e9 for 2.4 GHz)
+        span: Frequency span in Hz (e.g., 100e6 for 100 MHz)
+        duration: Total capture duration in seconds
+        interval: Time between measurements in seconds
+        filename_prefix: Prefix for output files (default: "waterfall")
+        rbw: Resolution bandwidth in Hz (optional)
+        ref_level: Reference level in dBm (optional)
         
     Returns:
-        JSON with screenshot path and status
+        JSON with capture results, file paths, and statistics
     """
     try:
         logger = logging.getLogger(__name__)
@@ -818,30 +832,48 @@ def vnc_screenshot(filename: Optional[str] = None) -> str:
         # Get the shared data layer directory  
         shared_data_dir = get_shared_data_dir()
         
-        # Take VNC screenshot
-        filepath, error = take_vnc_screenshot(shared_data_dir, filename)
+        # Capture spectrum waterfall
+        result = capture_spectrum_waterfall(
+            center_freq=center_freq,
+            span=span,
+            duration=duration,
+            interval=interval,
+            save_dir=shared_data_dir,
+            filename_prefix=filename_prefix,
+            rbw=rbw,
+            ref_level=ref_level
+        )
         
-        if error:
-            logger.error(f"VNC screenshot failed: {error}")
+        if not result.get("success", False):
+            error_msg = result.get("error", "Unknown error")
+            logger.error(f"Spectrum waterfall capture failed: {error_msg}")
             return json.dumps({
                 "success": False,
-                "error": error
+                "error": error_msg
             }, indent=2)
         
-        # Get file info
-        file_size = os.path.getsize(filepath) if os.path.exists(filepath) else 0
+        # Get file sizes
+        data_file = result.get("data_file", "")
+        plot_file = result.get("plot_file", "")
+        data_size = os.path.getsize(data_file) if os.path.exists(data_file) else 0
+        plot_size = os.path.getsize(plot_file) if os.path.exists(plot_file) else 0
         
-        logger.info(f"VNC screenshot saved: {filepath} ({file_size} bytes)")
+        logger.info(f"Spectrum waterfall captured: {data_file} ({data_size} bytes), {plot_file} ({plot_size} bytes)")
         
         return json.dumps({
             "success": True,
-            "screenshot_path": filepath,
-            "filename": os.path.basename(filepath),
-            "file_size_bytes": file_size
+            "data_file": data_file,
+            "plot_file": plot_file,
+            "data_filename": os.path.basename(data_file) if data_file else "",
+            "plot_filename": os.path.basename(plot_file) if plot_file else "",
+            "data_size_bytes": data_size,
+            "plot_size_bytes": plot_size,
+            "statistics": result.get("statistics", {}),
+            "capture_duration": result.get("capture_duration", 0)
         }, indent=2)
         
     except Exception as e:
-        logger.error(f"VNC screenshot error: {str(e)}")
+        logger.error(f"Spectrum waterfall capture error: {str(e)}")
         return json.dumps({
             "success": False,
             "error": str(e)
@@ -916,7 +948,7 @@ Examples:
     
     # Start server with HTTP transport
     logger.info(f"Starting USRP FastMCP server on HTTP {args.host}:{args.port}/mcp")
-    logger.info("Available tools: uhd_find_devices, uhd_usrp_probe, uhd_siggen, uhd_rx_cfile, list_shared_files, vnc_screenshot")
+    logger.info("Available tools: uhd_find_devices, uhd_usrp_probe, uhd_siggen, uhd_rx_cfile, list_shared_files, capture_spectrum_waterfall")
     logger.info(f"Shared data directory: {get_shared_data_dir()}")
     logger.info("Press Ctrl+C to stop the server")
     
