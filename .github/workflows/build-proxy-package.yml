@@ -52,7 +52,6 @@ jobs:
         - **Build Number:** ${{ github.run_number }}
         - **Git Commit:** ${{ github.sha }}
         - **Source Branch:** ${{ github.ref_name }}
-        - **Build Date:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
         EOF
         
     - name: Add build metadata
@@ -93,13 +92,13 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         tag_name: proxy-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}
-        name: USRP Proxy Extension v${{ steps.get_version.outputs.version }} (Build ${{ github.run_number }})
+        name: USRP MCP Proxy Extension v${{ steps.get_version.outputs.version }} (Build ${{ github.run_number }})
         body: |
           **Version:** ${{ steps.get_version.outputs.version }}  
           **Build:** ${{ github.run_number }}  
           **Commit:** ${{ github.sha }}  
           **Branch:** ${{ github.ref_name }}  
-          **Built:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+
         files: |
           usrp-proxy-dxt-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.tar.gz
           usrp-proxy-dxt-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.zip
