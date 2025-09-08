@@ -59,17 +59,6 @@ hatch -e dev shell
 
 See `hatch_commands.md` for comprehensive Hatch usage.
 
-## Available Tools
-
-- `uhd_find_devices()` - Find connected USRP devices
-- `uhd_usrp_probe()` - Get detailed device information
-- `uhd_siggen()` - Generate RF signals
-- `uhd_rx_samples_to_file()` - Capture RF samples
-- `get_uhd_info()` - Get UHD version information
-- `list_processes()` - Show running processes
-- `stop_process()` - Stop specific processes
-- `cleanup_all_processes()` - Stop all processes
-
 ## Usage Examples
 
 See `example_commands.md` for detailed usage examples.
@@ -95,4 +84,4 @@ See `example_commands.md` for detailed usage examples.
 
 ## License
 
-TBD
+2025 Andrea Lacava All rights reserved

@@ -48,9 +48,6 @@ jobs:
       
     - name: Create package documentation
       run: |
-        # Copy the existing README.md from the repo root
-        cp README.md proxy-package/
-        
         # Add build version information to the README
         cat >> proxy-package/README.md << 'EOF'
         
@@ -78,9 +75,7 @@ jobs:
           "build_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
           "git_commit": "${{ github.sha }}",
           "git_branch": "${{ github.ref_name }}",
-          "build_number": "${{ github.run_number }}",
-          "spectrum_analyzer": true,
-          "vnc_support": false
+          "build_number": "${{ github.run_number }}"
         }
         EOF
         
@@ -107,7 +102,7 @@ jobs:
           usrp-proxy-dxt-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.tar.gz
           usrp-proxy-dxt-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.zip
           checksums.txt
-        retention-days: 90
+        retention-days: 30
         
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
@@ -126,13 +121,6 @@ jobs:
           - **🌿 Branch:** ${{ github.ref_name }}
           - **📅 Built:** $(date -u +%Y-%m-%d\ %H:%M:%S\ UTC)
           
-          ### ✨ What's New
-          - 📡 **Keysight EXA Spectrum Analyzer** - Capture waterfall plots and analyze RF spectrum
-          - 🔧 **Enhanced USRP Control** - Complete UHD tool integration with 25+ parameters
-          - 🗂️ **Improved File Management** - Better shared data directory handling
-          - ⚡ **Optimized Performance** - Faster response times and error handling
-          - ❌ **VNC Removed** - Replaced with more useful spectrum analyzer functionality
-          
           ### 📥 Downloads
           - **Linux/macOS:** `usrp-proxy-dxt-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.tar.gz`
           - **Windows:** `usrp-proxy-dxt-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.zip`
@@ -143,24 +131,6 @@ jobs:
           2. Extract to your desired location (e.g., `~/usrp-proxy-dxt/`)
           3. Follow the installation guide in `usrp-proxy-dxt/INSTALL.md`
           4. Configure Claude Desktop to use this extension
-          
-          ### 🛠️ Available MCP Tools (10 total)
-          
-          **📡 RF & Spectrum Analysis:**
-          - `capture_spectrum_waterfall` - **NEW!** Spectrum analyzer waterfall capture from Keysight EXA
-          - `uhd_siggen` - Generate signals with USRP (25+ parameters)
-          - `uhd_rx_cfile` - Receive and save RF data using GNU Radio
-          
-          **🔍 Device Management:**
-          - `uhd_find_devices` - Find connected USRP devices
-          - `uhd_usrp_probe` - Probe USRP device details  
-          - `get_uhd_info` - Get UHD installation info
-          
-          **📂 File & Process Management:**
-          - `list_shared_files` - List files in shared directory (captures, plots, etc.)
-          - `list_processes` - View running UHD processes
-          - `stop_process` - Stop specific UHD processes
-          - `cleanup_all_processes` - Stop all UHD processes
           
         files: |
           usrp-proxy-dxt-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.tar.gz
