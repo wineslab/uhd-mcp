@@ -32,58 +32,19 @@ jobs:
     - name: Create proxy package
       run: |
         cd src/usrp_proxy_dxt
-        npm pack
-        mkdir -p ../../proxy-package
-        tar -xzf *.tgz -C ../../proxy-package
-        cd ../../proxy-package/package
-        npm install --omit=dev --no-package-lock
-      
-    - name: Create package documentation
-      run: |
-        cp README.md proxy-package/
-        cat >> proxy-package/README.md << 'EOF'
-        
-        ---
-        
-        ## 📋 Build Information
-        
-        - **Version:** ${{ steps.get_version.outputs.version }}
-        - **Build Number:** ${{ github.run_number }}
-        - **Git Commit:** ${{ github.sha }}
-        - **Source Branch:** ${{ github.ref_name }}
-        EOF
-        
-    - name: Add build metadata
-      run: |
-        cat > proxy-package/package/build-info.json << EOF
-        {
-          "version": "${{ steps.get_version.outputs.version }}",
-          "build_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-          "git_commit": "${{ github.sha }}",
-          "git_branch": "${{ github.ref_name }}",
-          "build_number": "${{ github.run_number }}"
-        }
-        EOF
-        
-    - name: Create distribution packages
-      run: |
-        cd proxy-package
-        tar -czf ../usrp-proxy-dxt-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.tar.gz .
-        cd ..
-        zip -r usrp-proxy-dxt-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.zip proxy-package/
+        dxt pack .
+        mv *.dxt ../../usrp-proxy-dxt-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.dxt
         
     - name: Generate package checksums
       run: |
-        sha256sum usrp-proxy-dxt-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.tar.gz > checksums.txt
-        sha256sum usrp-proxy-dxt-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.zip >> checksums.txt
+        sha256sum usrp-proxy-dxt-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.dxt > checksums.txt
         
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
         name: usrp-proxy-dxt-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}
         path: |
-          usrp-proxy-dxt-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.tar.gz
-          usrp-proxy-dxt-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.zip
+          usrp-proxy-dxt-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.dxt
           checksums.txt
         retention-days: 90
         
@@ -99,8 +60,7 @@ jobs:
           **Branch:** ${{ github.ref_name }}  
 
         files: |
-          usrp-proxy-dxt-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.tar.gz
-          usrp-proxy-dxt-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.zip
+          usrp-proxy-dxt-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.dxt
           checksums.txt
         draft: false
         prerelease: true
