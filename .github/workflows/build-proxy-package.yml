@@ -41,7 +41,7 @@ jobs:
         
     - name: Generate package checksums
       run: |
-        sha256sum usrp-proxy-dxt-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.dxt > checksums.txt
+        sha256sum usrp-proxy-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.dxt > checksums.txt
         
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
