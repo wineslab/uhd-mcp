@@ -2,7 +2,9 @@ name: Build and Package USRP Proxy Extension
 
 on:
   push:
-    branches: [ first-it ]
+    branches: [ develop ]
+  pull_request:
+    branches: [ develop ]
 
 jobs:
   build-proxy:
