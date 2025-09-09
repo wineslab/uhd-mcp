@@ -13,6 +13,8 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+      with:
+        ref: ${{ github.head_ref || github.ref_name }}
       
     - name: Setup Node.js
       uses: actions/setup-node@v4
@@ -35,7 +37,7 @@ jobs:
       run: |
         cd src/usrp_proxy_dxt
         npx dxt pack .
-        mv *.dxt ../../usrp-proxy-dxt-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.dxt
+        mv *.dxt ../../usrp-proxy-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.dxt
         
     - name: Generate package checksums
       run: |
@@ -44,9 +46,9 @@ jobs:
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: usrp-proxy-dxt-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}
+        name: usrp-proxy-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}
         path: |
-          usrp-proxy-dxt-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.dxt
+          usrp-proxy-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.dxt
           checksums.txt
         retention-days: 90
         
@@ -59,10 +61,10 @@ jobs:
           **Version:** ${{ steps.get_version.outputs.version }}  
           **Build:** ${{ github.run_number }}  
           **Commit:** ${{ github.sha }}  
-          **Branch:** ${{ github.ref_name }}  
+          **Branch:** ${{ github.head_ref || github.ref_name }}  
 
         files: |
-          usrp-proxy-dxt-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.dxt
+          usrp-proxy-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.dxt
           checksums.txt
         draft: false
         prerelease: true
