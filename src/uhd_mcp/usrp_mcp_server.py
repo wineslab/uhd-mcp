@@ -948,7 +948,6 @@ Examples:
     
     # Start server with HTTP transport
     logger.info(f"Starting USRP FastMCP server on HTTP {args.host}:{args.port}/mcp")
-    logger.info("Available tools: uhd_find_devices, uhd_usrp_probe, uhd_siggen, uhd_rx_cfile, list_shared_files, capture_spectrum_waterfall")
     logger.info(f"Shared data directory: {get_shared_data_dir()}")
     logger.info("Press Ctrl+C to stop the server")
     
