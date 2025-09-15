@@ -808,19 +808,17 @@ def capture_spectrum_waterfall(
     center_freq: float,
     span: float, 
     duration: float,
-    interval: float,
     filename_prefix: str = "waterfall",
     rbw: Optional[float] = None,
     ref_level: Optional[float] = None
 ) -> str:
     """
-    Capture spectrum waterfall from Keysight EXA spectrum analyzer
+    Capture spectrum waterfall from Keysight EXA spectrum analyzer using continuous capture
     
     Args:
         center_freq: Center frequency in Hz (e.g., 2.4e9 for 2.4 GHz)
         span: Frequency span in Hz (e.g., 100e6 for 100 MHz)
         duration: Total capture duration in seconds
-        interval: Time between measurements in seconds
         filename_prefix: Prefix for output files (default: "waterfall")
         rbw: Resolution bandwidth in Hz (optional)
         ref_level: Reference level in dBm (optional)
@@ -839,7 +837,6 @@ def capture_spectrum_waterfall(
             center_freq=center_freq,
             span=span,
             duration=duration,
-            interval=interval,
             save_dir=shared_data_dir,
             filename_prefix=filename_prefix,
             rbw=rbw,

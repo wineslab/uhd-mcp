@@ -5,7 +5,7 @@ Test script for spectrum analyzer waterfall capture
 
 import os
 import logging
-from src.uhd_mcp.utils.spectrum_analyzer import capture_spectrum_waterfall, get_analyzer_config
+from uhd_mcp.utils.spectrum_analyzer import KeysightEXA, capture_spectrum_waterfall, get_analyzer_config
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -31,10 +31,9 @@ def test_waterfall_capture():
     
     # Test parameters
     test_params = {
-        "center_freq": 3.75e9,      # 3.75 GHz
+        "center_freq": 2.4e9,      # 2.4 GHz
         "span": 100e6,             # 100 MHz span
-        "duration": 30,            # 30 seconds capture
-        "interval": 2.0,           # 2 seconds between measurements
+        "duration": 10,            # 10 seconds capture
         "save_dir": "/tmp/test_spectrum",
         "filename_prefix": "test_waterfall",
         "rbw": 1e6,               # 1 MHz resolution bandwidth
@@ -45,7 +44,6 @@ def test_waterfall_capture():
     print(f"  Center Frequency: {test_params['center_freq']/1e6:.1f} MHz")
     print(f"  Span: {test_params['span']/1e6:.1f} MHz")
     print(f"  Duration: {test_params['duration']} seconds")
-    print(f"  Interval: {test_params['interval']} seconds")
     print(f"  RBW: {test_params['rbw']/1e6:.1f} MHz")
     print(f"  Reference Level: {test_params['ref_level']} dBm")
     print(f"  Save Directory: {test_params['save_dir']}")
@@ -86,9 +84,7 @@ def test_waterfall_capture():
         return False
 
 def test_simple_connection():
-    """Test simple connection to the spectrum analyzer"""
-    from src.uhd_mcp.utils.spectrum_analyzer import KeysightEXA, get_analyzer_config
-    
+    """Test simple connection to the spectrum analyzer"""    
     print("Testing simple connection to spectrum analyzer...")
     
     config = get_analyzer_config()

@@ -308,15 +308,14 @@ class KeysightEXA:
         return frequencies, amplitudes
     
     def capture_waterfall(self, config: SpectrumConfig, duration: float, 
-                         interval: float, save_dir: str, 
+                         save_dir: str, 
                          filename_prefix: str = "waterfall") -> Dict:
         """
-        Capture waterfall display over time
+        Capture waterfall display over time using continuous capture
         
         Args:
             config: SpectrumConfig for measurement setup
             duration: Total capture duration in seconds
-            interval: Time between measurements in seconds
             save_dir: Directory to save waterfall data
             filename_prefix: Prefix for saved files
             
@@ -326,20 +325,26 @@ class KeysightEXA:
         # Configure the analyzer
         self.configure_spectrum(config)
         
-        # Calculate number of measurements
-        num_measurements = int(duration / interval)
-        
         # Storage for waterfall data
         waterfall_data = []
         timestamps = []
         frequencies = None
         
-        self.logger.info(f"Starting waterfall capture: {num_measurements} measurements over {duration}s")
+        self.logger.info(f"Starting continuous waterfall capture for {duration}s")
         
         start_time = time.time()
+        measurement_count = 0
         
         try:
-            for i in range(num_measurements):
+            while True:
+                current_time = time.time()
+                elapsed_time = current_time - start_time
+                
+                # Check if we've exceeded the duration
+                if elapsed_time >= duration:
+                    self.logger.info(f"Reached duration limit ({duration}s) after {measurement_count} measurements")
+                    break
+                
                 measurement_time = datetime.now()
                 
                 # Get trace data
@@ -350,14 +355,9 @@ class KeysightEXA:
                 
                 waterfall_data.append(amps)
                 timestamps.append(measurement_time)
+                measurement_count += 1
                 
-                self.logger.debug(f"Captured measurement {i+1}/{num_measurements}")
-                
-                # Wait for next measurement (accounting for measurement time)
-                elapsed = time.time() - start_time - (i * interval)
-                sleep_time = interval - elapsed
-                if sleep_time > 0:
-                    time.sleep(sleep_time)
+                self.logger.debug(f"Captured measurement {measurement_count}")
             
             # Convert to numpy arrays
             waterfall_array = np.array(waterfall_data)
@@ -390,7 +390,7 @@ class KeysightEXA:
                 "center_frequency_mhz": config.center_freq / 1e6,
                 "span_mhz": config.span / 1e6,
                 "duration_seconds": duration,
-                "num_measurements": num_measurements,
+                "num_measurements": measurement_count,
                 "min_amplitude_dbm": float(np.min(waterfall_array)),
                 "max_amplitude_dbm": float(np.max(waterfall_array)),
                 "mean_amplitude_dbm": float(np.mean(waterfall_array)),
@@ -466,18 +466,17 @@ def get_analyzer_config() -> Dict[str, str]:
 
 
 def capture_spectrum_waterfall(center_freq: float, span: float, duration: float,
-                              interval: float, save_dir: str, 
+                              save_dir: str, 
                               filename_prefix: str = "waterfall",
                               rbw: Optional[float] = None,
                               ref_level: Optional[float] = None) -> Dict:
     """
-    High-level function to capture spectrum waterfall
+    High-level function to capture spectrum waterfall using continuous capture
     
     Args:
         center_freq: Center frequency in Hz
         span: Frequency span in Hz
         duration: Total capture duration in seconds
-        interval: Time between measurements in seconds
         save_dir: Directory to save results
         filename_prefix: Prefix for output files
         rbw: Resolution bandwidth in Hz (optional)
@@ -518,7 +517,6 @@ def capture_spectrum_waterfall(center_freq: float, span: float, duration: float,
         result = analyzer.capture_waterfall(
             config=spec_config,
             duration=duration,
-            interval=interval,
             save_dir=save_dir,
             filename_prefix=filename_prefix
         )
@@ -543,4 +541,4 @@ def capture_spectrum_waterfall(center_freq: float, span: float, duration: float,
 if __name__ == "__main__":
     print("Use test_spectrum_analyzer.py for testing this module")
     print("Example:")
-    print("  hatch run python test_spectrum_analyzer.py")
+    print("  hatch run python tests/spectrum_analyzer/test_spectrum_analyzer.py")

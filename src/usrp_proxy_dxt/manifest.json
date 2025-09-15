@@ -51,7 +51,7 @@
     },
     {
       "name": "capture_spectrum_waterfall",
-      "description": "Capture spectrum waterfall from Keysight EXA spectrum analyzer with configurable parameters"
+      "description": "Capture spectrum waterfall using continuous capture from Keysight EXA spectrum analyzer"
     },
     {
       "name": "get_uhd_info",
