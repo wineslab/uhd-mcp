@@ -82,8 +82,8 @@ class KeysightEXA:
             
             try:
                 self.socket.close()
-            except:
-                pass
+            except Exception as e:
+                self.logger.warning(f"Error closing socket: {str(e)}")
             self.socket = None
     
     def send(self, command: str):
