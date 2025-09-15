@@ -4,6 +4,7 @@ FastMCP Server for USRP Control via UHD and GNU Radio
 """
 
 from fastmcp import FastMCP
+from fastmcp.utilities.types import File, Image
 import subprocess
 import json
 import os
@@ -879,6 +880,52 @@ def capture_spectrum_waterfall(
             "success": False,
             "error": str(e)
         }, indent=2)
+
+@mcp.tool()
+def download_file(filename: str) -> File | Image:
+    """
+    Download a file from the shared data layer
+    
+    Args:
+        filename: Name of the file to download from the shared data directory
+        
+    Returns:
+        File or Image object with the file content, automatically handled by fastmcp
+    """
+    logger = logging.getLogger(__name__)
+    
+    try:
+        # Get the shared data directory
+        shared_data_dir = get_shared_data_dir()
+        file_path = os.path.join(shared_data_dir, filename)
+        
+        # Security check: ensure the file is within the shared data directory
+        if not os.path.commonpath([shared_data_dir, file_path]) == shared_data_dir:
+            raise ValueError("Access denied: file outside shared data directory")
+        
+        # Check if file exists
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"File not found: {filename}")
+        
+        # Check if it's actually a file (not a directory)
+        if not os.path.isfile(file_path):
+            raise ValueError(f"Path is not a file: {filename}")
+        
+        # Get file extension to determine if it's an image
+        file_ext = os.path.splitext(filename)[1].lower()
+        image_extensions = {'.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.tiff', '.svg'}
+        
+        logger.info(f"Downloading file: {filename} ({os.path.getsize(file_path)} bytes)")
+        
+        # Return appropriate type based on file extension
+        if file_ext in image_extensions:
+            return Image(path=file_path)
+        else:
+            return File(path=file_path, name=filename)
+        
+    except Exception as e:
+        logger.error(f"File download error: {str(e)}")
+        raise
 
 def cleanup_on_exit():
     """Cleanup function for atexit"""

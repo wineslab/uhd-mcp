@@ -571,6 +571,20 @@ class USRPProxyServer {
               required: ["center_freq", "span", "duration", "interval"],
             },
           },
+          {
+            name: "download_file",
+            description: "Download a file from the shared data layer. Returns the actual file content (images as ImageContent, other files as EmbeddedResource with proper MIME types)",
+            inputSchema: {
+              type: "object",
+              properties: {
+                filename: {
+                  type: "string",
+                  description: "Name of the file to download from the shared data directory",
+                },
+              },
+              required: ["filename"],
+            },
+          },
         ],
       };
     });

@@ -162,6 +162,7 @@ class MCPProxyTester {
       await this.testToolCall("get_uhd_info");
       await this.testToolCall("uhd_find_devices");
       await this.testToolCall("list_processes");
+      await this.testToolCall("download_file", { filename: "nonexistent.txt" }); // Test error handling
       
       // Test with arguments
       await this.testToolCall("uhd_usrp_probe", { args: "--tree" });
