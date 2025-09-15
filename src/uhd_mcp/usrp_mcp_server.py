@@ -17,7 +17,7 @@ from .utils import (
     parse_uhd_find_devices_output, 
     parse_uhd_config_info_output,
     get_shared_data_dir,
-    capture_spectrum_waterfall
+    capture_spectrum_waterfall as _capture_spectrum_waterfall
 )
 
 # Create the MCP server
@@ -834,7 +834,7 @@ def capture_spectrum_waterfall(
         shared_data_dir = get_shared_data_dir()
         
         # Capture spectrum waterfall
-        result = capture_spectrum_waterfall(
+        result = _capture_spectrum_waterfall(
             center_freq=center_freq,
             span=span,
             duration=duration,
