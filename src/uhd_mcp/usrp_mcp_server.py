@@ -309,7 +309,8 @@ def uhd_siggen(
                     try:
                         process.stdin.write('\n')
                         process.stdin.flush()
-                    except:
+                    except Exception as e:
+                        logger.error(f"Failed to write to process stdin for {process_id}: {e}")
                         # If stdin fails, terminate normally
                         process.terminate()
             
