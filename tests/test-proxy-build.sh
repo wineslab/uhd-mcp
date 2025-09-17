@@ -27,15 +27,15 @@ import('./server/index.js').then(() => {
 " &
 VALIDATE_PID=$!
 
-# Give it 5 seconds to validate
-sleep 5
-if kill -0 $VALIDATE_PID 2>/dev/null; then
-    kill $VALIDATE_PID
+# Wait for validation process to complete and check exit status
+wait $VALIDATE_PID
+VALIDATE_EXIT_CODE=$?
+if [ $VALIDATE_EXIT_CODE -eq 0 ]; then
     echo "✅ Proxy validation completed"
 else
-    wait $VALIDATE_PID
+    echo "❌ Proxy validation failed"
+    exit 1
 fi
-
 echo "📋 Validating manifest..."
 npm run validate
 
