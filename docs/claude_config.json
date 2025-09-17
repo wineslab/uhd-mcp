@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "usrp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-fetch",
+        "https://uhd-mcp-route-mcp-services.apps.tenoran.automation.otic.open6g.net/mcp/"
+      ]
+    }
+  }
+}

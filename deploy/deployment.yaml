@@ -1,0 +1,77 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: uhd-mcp
+  namespace: mcp-services
+  annotations:
+    deployment.kubernetes.io/revision: '18'
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: uhd-mcp
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: uhd-mcp
+      annotations:
+        cpu-load-balancing.crio.io: disable
+        cpu-quota.crio.io: disable
+        irq-load-balancing.crio.io: disable
+        k8s.v1.cni.cncf.io/networks: worker-microway-radio-network-sriov-mcp
+    spec:
+      containers:
+        - resources:
+            limits:
+              openshift.io/sriovnet_connectx_6: '1'
+          terminationMessagePath: /dev/termination-log
+          name: container
+          command:
+            - ./start.sh
+          securityContext:
+            capabilities:
+              drop:
+                - ALL
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            seccompProfile:
+              type: RuntimeDefault
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          env:
+            - name: MCP_SHARED_DATA_DIR
+              value: "/home/worker/uhd-mcp/shared-data-layer"
+            - name: VNC_HOST
+              value: "10.101.209.51"
+            - name: VNC_PORT
+              value: "5900"
+            - name: VNC_PASSWORD
+              value: "1234"
+            - name: PAT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: github-pat
+                  key: token
+          imagePullPolicy: Always
+          terminationMessagePolicy: File
+          image: 'image-registry.openshift-image-registry.svc:5000/deployment-pipeline/mcp-uhd:latest'
+          volumeMounts:
+            - name: mcp-shared-data-layer-volume
+              mountPath: /home/worker/uhd-mcp/shared-data-layer
+      volumes:
+        - name: mcp-shared-data-layer-volume
+          persistentVolumeClaim:
+            claimName: mcp-shared-data-layer-pvc
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      dnsPolicy: ClusterFirst
+      securityContext:
+        runAsUser: 1002220000
+        runAsGroup: 1002220000
+        runAsNonRoot: true
+        fsGroup: 1002220000
+        seccompProfile:
+          type: RuntimeDefault
+      schedulerName: default-scheduler

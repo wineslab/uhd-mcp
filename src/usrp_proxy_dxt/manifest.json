@@ -1,0 +1,109 @@
+{
+  "dxt_version": "0.1",
+  "name": "usrp-proxy",
+  "display_name": "USRP MCP Proxy",
+  "icon": "icon.png",
+  "version": "0.0.1",
+  "description": "Local MCP proxy for remote USRP MCP server with spectrum analyzer, file download, and SDR capabilities",
+  "long_description": "This extension provides a local MCP proxy that connects to a remote USRP MCP server, enabling Claude Desktop to control software-defined radio equipment and spectrum analyzers. Features comprehensive signal generation with 25+ parameters, GNU Radio integration for data capture, spectrum waterfall analysis from Keysight EXA analyzers, file download from shared data layer, background process management, and professional logging. Includes device discovery, hardware probing, spectrum analysis, file management, and complete radio hardware control through a clean MCP interface.",
+  "author": {
+    "name": "Andrea Lacava",
+    "email": "thecave003@gmail.com"
+  },
+  "homepage": "https://github.com/wineslab/uhd-mcp",
+  "documentation": "https://github.com/wineslab/uhd-mcp/blob/main/README.md",
+  "support": "https://github.com/wineslab/uhd-mcp/issues",
+  "keywords": ["sdr", "usrp", "radio", "uhd", "mcp", "proxy", "wireless", "spectrum", "analyzer", "keysight", "waterfall"],
+  "license": "MIT",
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/server/index.js"],
+      "env": {
+        "USRP_SERVER_URL": "${user_config.server_url}",
+        "REQUEST_TIMEOUT": "${user_config.request_timeout}",
+        "DEBUG_MODE": "${user_config.debug_mode}"
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "uhd_find_devices",
+      "description": "Find all connected UHD devices with structured JSON output"
+    },
+    {
+      "name": "uhd_usrp_probe",
+      "description": "Probe USRP device for detailed hardware information"
+    },
+    {
+      "name": "uhd_siggen",
+      "description": "Generate signals on USRP with comprehensive parameter control (25+ parameters)"
+    },
+    {
+      "name": "uhd_rx_cfile",
+      "description": "Capture RF samples from USRP to complex file using GNU Radio"
+    },
+    {
+      "name": "list_shared_files",
+      "description": "List all files in the shared data directory (captures, waterfall plots, data files, etc.)"
+    },
+    {
+      "name": "capture_spectrum_waterfall",
+      "description": "Capture spectrum waterfall using continuous capture from Keysight EXA spectrum analyzer"
+    },
+    {
+      "name": "get_uhd_info",
+      "description": "Get UHD installation and configuration information"
+    },
+    {
+      "name": "stop_process",
+      "description": "Stop a running UHD background process"
+    },
+    {
+      "name": "list_processes",
+      "description": "List all running UHD background processes"
+    },
+    {
+      "name": "cleanup_all_processes",
+      "description": "Stop all running UHD background processes"
+    },
+    {
+      "name": "download_file",
+      "description": "Download files from the shared data layer with automatic format detection (images display directly, other files as downloadable resources)"
+    }
+
+  ],
+  "tools_generated": false,
+  "compatibility": {
+    "claude_desktop": ">=0.12.0",
+    "platforms": ["darwin", "win32", "linux"],
+    "runtimes": {
+      "node": ">=16.0.0"
+    }
+  },
+  "user_config": {
+    "server_url": {
+      "type": "string",
+      "title": "USRP Server URL",
+      "description": "URL of the remote USRP MCP server (e.g., https://uhd-mcp-route-mcp-services.apps.tenoran.automation.otic.open6g.net/mcp)",
+      "required": true,
+      "default": "https://uhd-mcp-route-mcp-services.apps.tenoran.automation.otic.open6g.net/mcp"
+    },
+    "request_timeout": {
+      "type": "number",
+      "title": "Request Timeout (seconds)",
+      "description": "Maximum time to wait for server responses",
+      "default": 60,
+      "min": 10,
+      "max": 300
+    },
+    "debug_mode": {
+      "type": "boolean",
+      "title": "Debug Mode",
+      "description": "Enable verbose logging for troubleshooting",
+      "default": false
+    }
+  }
+}
