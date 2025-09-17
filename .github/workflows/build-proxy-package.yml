@@ -1,0 +1,72 @@
+name: Build and Package USRP Proxy Extension
+
+on:
+  push:
+    branches: [ develop ]
+  pull_request:
+    branches: [ develop ]
+
+jobs:
+  build-proxy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.head_ref || github.ref_name }}
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        
+    - name: Install dependencies and dev tools
+      working-directory: src/usrp_proxy_dxt
+      run: npm install --include=dev
+      
+    - name: Get version from manifest
+      id: get_version
+      working-directory: src/usrp_proxy_dxt
+      run: |
+        VERSION=$(node -e "console.log(JSON.parse(require('fs').readFileSync('manifest.json', 'utf8')).version)")
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Package version: $VERSION"
+        
+    - name: Create proxy package
+      run: |
+        cd src/usrp_proxy_dxt
+        npx dxt pack .
+        mv *.dxt ../../usrp-proxy-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.dxt
+        
+    - name: Generate package checksums
+      run: |
+        sha256sum usrp-proxy-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.dxt > checksums.txt
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: usrp-proxy-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}
+        path: |
+          usrp-proxy-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.dxt
+          checksums.txt
+        retention-days: 90
+        
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: proxy-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}
+        name: USRP MCP Proxy Extension v${{ steps.get_version.outputs.version }} (Build ${{ github.run_number }})
+        body: |
+          **Version:** ${{ steps.get_version.outputs.version }}  
+          **Build:** ${{ github.run_number }}  
+          **Commit:** ${{ github.sha }}  
+          **Branch:** ${{ github.head_ref || github.ref_name }}  
+
+        files: |
+          usrp-proxy-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.dxt
+          checksums.txt
+        draft: false
+        prerelease: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

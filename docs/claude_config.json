@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "usrp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-fetch",
+        "https://uhd-mcp.your-domain.example/mcp/"
+      ]
+    }
+  }
+}
