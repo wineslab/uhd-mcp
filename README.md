@@ -36,6 +36,17 @@ A Model Context Protocol (MCP) server for controlling USRP software-defined radi
    hatch run python -m uhd_mcp --port 8080
    ```
 
+3. **Add the following c**:
+
+   ```bash
+   "uhd-mcp": {
+      url": "https://<url of your MCP server>:<port>/mcp",
+      "type": "http"
+   }
+   ```
+
+   This will use the remote HTTP server, for claude there is an alternative that uses the proxy through the digital extension
+
 ## Development with Hatch
 
 This project uses [Hatch](https://hatch.pypa.io/) for dependency management and environment isolation.
