@@ -14,6 +14,24 @@ import threading
 import time
 import argparse
 
+try:
+    import toons as _toons
+    _TOONS_AVAILABLE = True
+except ImportError:
+    _TOONS_AVAILABLE = False
+
+
+def format_output(data) -> str:
+    """
+    Serialize tool output using TOON notation when available, falling back to JSON.
+
+    TOON (Token-Oriented Object Notation) is a compact, human-readable format
+    optimised for Large Language Model contexts.  See https://toons.readthedocs.io
+    """
+    if _TOONS_AVAILABLE:
+        return _toons.dumps(data)
+    return json.dumps(data, indent=2)
+
 from .utils import (
     parse_uhd_find_devices_output, 
     parse_uhd_config_info_output,
@@ -45,24 +63,24 @@ def uhd_find_devices() -> str:
             parsed_devices = parse_uhd_find_devices_output(result.stdout)
             logger.info(f"Found {len(parsed_devices) if parsed_devices else 0} UHD devices")
             
-            return json.dumps({
+            return format_output({
                 "command": "uhd_find_devices",
                 "return_code": result.returncode,
                 "success": True,
                 "parsed_output": parsed_devices,
                 "raw_stdout": result.stdout,
                 "stderr": result.stderr
-            }, indent=2)
+            })
         else:
             logger.warning("uhd_find_devices failed or returned no output")
-            return json.dumps({
+            return format_output({
                 "command": "uhd_find_devices",
                 "return_code": result.returncode,
                 "stdout": result.stdout,
                 "stderr": result.stderr,
                 "success": result.returncode == 0,
                 "error": "No devices found or command failed"
-            }, indent=2)
+            })
         
     except subprocess.TimeoutExpired:
         return "Command timed out after 30 seconds"
@@ -120,13 +138,13 @@ def uhd_usrp_probe(args: str = "") -> str:
             timeout=60  # Increased timeout for probe operations
         )
         
-        return json.dumps({
+        return format_output({
             "command": " ".join(cmd),
             "return_code": result.returncode,
             "stdout": result.stdout,
             "stderr": result.stderr,
             "success": result.returncode == 0
-        }, indent=2)
+        })
         
     except subprocess.TimeoutExpired:
         return "Command timed out after 60 seconds"
@@ -270,10 +288,10 @@ def uhd_siggen(
         elif waveform_type.lower() == "sweep":
             cmd.append("--sweep")
         else:
-            return json.dumps({
+            return format_output({
                 "error": f"Invalid waveform_type '{waveform_type}'. Must be one of: sine, const, gaussian, uniform, 2tone, sweep",
                 "success": False
-            }, indent=2)
+            })
         
         # Add any additional arguments
         if additional_args:
@@ -331,7 +349,7 @@ def uhd_siggen(
                 message = f"Signal generation started for {duration} seconds. Will stop automatically or use stop_process('{process_id}') to stop early."
                 logger.info(f"Process {process_id} started for {duration} seconds")
             
-            return json.dumps({
+            return format_output({
                 "process_id": process_id,
                 "command": " ".join(cmd),
                 "status": "running",
@@ -339,7 +357,7 @@ def uhd_siggen(
                 "success": True,
                 "duration": duration,
                 "message": message
-            }, indent=2)
+            })
         else:
             # Process terminated immediately
             logger.warning(f"Process {process_id} terminated immediately")
@@ -347,7 +365,7 @@ def uhd_siggen(
             if process_id in running_processes:
                 del running_processes[process_id]
             
-            return json.dumps({
+            return format_output({
                 "process_id": process_id,
                 "command": " ".join(cmd),
                 "return_code": process.returncode,
@@ -356,7 +374,7 @@ def uhd_siggen(
                 "success": False,
                 "duration": duration,
                 "message": f"Process terminated immediately (intended duration: {duration} seconds)"
-            }, indent=2)
+            })
                 
     except subprocess.TimeoutExpired:
         return "Command timed out"
@@ -405,7 +423,7 @@ def stop_process(process_id: str) -> str:
             
             logger.info(f"Process {process_id} stopped successfully after {round(runtime, 2)} seconds")
             
-            return json.dumps({
+            return format_output({
                 "process_id": process_id,
                 "command": process_info["command"],
                 "status": "stopped",
@@ -414,7 +432,7 @@ def stop_process(process_id: str) -> str:
                 "stdout": stdout,
                 "stderr": stderr,
                 "success": True
-            }, indent=2)
+            })
         else:
             # Process already terminated
             logger.info(f"Process {process_id} was already terminated")
@@ -424,7 +442,7 @@ def stop_process(process_id: str) -> str:
             
             del running_processes[process_id]
             
-            return json.dumps({
+            return format_output({
                 "process_id": process_id,
                 "command": process_info["command"],
                 "status": "already_terminated",
@@ -434,7 +452,7 @@ def stop_process(process_id: str) -> str:
                 "stdout": stdout,
                 "stderr": stderr,
                 "success": True
-            }, indent=2)
+            })
             
     except Exception as e:
         return f"Error stopping process: {str(e)}"
@@ -471,7 +489,7 @@ def list_processes() -> str:
     for process_id in terminated_ids:
         del running_processes[process_id]    
 
-    return json.dumps(processes_info, indent=2)
+    return format_output(processes_info)
 
 @mcp.tool()
 def uhd_rx_cfile(
@@ -606,7 +624,7 @@ def uhd_rx_cfile(
             samples_captured = 0
             logger.warning("No output file created during capture")
         
-        return json.dumps({
+        return format_output({
             "command": " ".join(cmd),
             "return_code": result.returncode,
             "stdout": result.stdout,
@@ -624,26 +642,26 @@ def uhd_rx_cfile(
             "output_file": filename,
             "file_created": file_created,
             "file_size_bytes": file_size
-        }, indent=2)
+        })
         
     except subprocess.TimeoutExpired:
-        return json.dumps({
+        return format_output({
             "success": False,
             "error": "Command timed out",
             "message": f"uhd_rx_cfile timed out after {timeout} seconds"
-        }, indent=2)
+        })
     except FileNotFoundError:
-        return json.dumps({
+        return format_output({
             "success": False,
             "error": "uhd_rx_cfile not found. Make sure GNU Radio and UHD are installed.",
             "command": "uhd_rx_cfile"
-        }, indent=2)
+        })
     except Exception as e:
-        return json.dumps({
+        return format_output({
             "success": False,
             "error": str(e),
             "command": "uhd_rx_cfile"
-        }, indent=2)
+        })
 
 @mcp.tool()
 def list_shared_files(file_type: str = "all") -> str:
@@ -667,11 +685,11 @@ def list_shared_files(file_type: str = "all") -> str:
         
         # Check if directory exists
         if not os.path.exists(shared_data_dir):
-            return json.dumps({
+            return format_output({
                 "success": False,
                 "error": f"Shared data directory {shared_data_dir} does not exist",
                 "files": []
-            }, indent=2)
+            })
         
         # Define file extensions for different types
         image_extensions = {'.png', '.jpg', '.jpeg', '.gif', '.bmp'}
@@ -723,32 +741,32 @@ def list_shared_files(file_type: str = "all") -> str:
                 })
         
         except PermissionError:
-            return json.dumps({
+            return format_output({
                 "success": False,
                 "error": f"Permission denied accessing {shared_data_dir}",
                 "files": []
-            }, indent=2)
+            })
         
         # Sort by modification time (newest first)
         files_info.sort(key=lambda x: x["modified_timestamp"], reverse=True)
         
         logger.info(f"Listed {len(files_info)} files in shared data layer (filter: {file_type})")
         
-        return json.dumps({
+        return format_output({
             "success": True,
             "shared_data_dir": shared_data_dir,
             "filter_applied": file_type,
             "total_files": len(files_info),
             "files": files_info
-        }, indent=2)
+        })
         
     except Exception as e:
         logger.error(f"Error listing shared files: {str(e)}")
-        return json.dumps({
+        return format_output({
             "success": False,
             "error": str(e),
             "files": []
-        }, indent=2)
+        })
 
 @mcp.tool()
 def cleanup_all_processes() -> str:
@@ -791,13 +809,13 @@ def get_uhd_info() -> str:
         else:
             response["error"] = "Failed to get UHD configuration information"
         
-        return json.dumps(response, indent=2)
+        return format_output(response)
         
     except FileNotFoundError:
-        return json.dumps({
+        return format_output({
             "error": "UHD tools not found in PATH",
             "uhd_tools_available": False
-        }, indent=2)
+        })
     except subprocess.TimeoutExpired:
         return "Command timed out after 10 seconds"
     except Exception as e:
@@ -846,10 +864,10 @@ def capture_spectrum_waterfall(
         if not result.get("success", False):
             error_msg = result.get("error", "Unknown error")
             logger.error(f"Spectrum waterfall capture failed: {error_msg}")
-            return json.dumps({
+            return format_output({
                 "success": False,
                 "error": error_msg
-            }, indent=2)
+            })
         
         # Get file sizes
         data_file = result.get("data_file", "")
@@ -859,7 +877,7 @@ def capture_spectrum_waterfall(
         
         logger.info(f"Spectrum waterfall captured: {data_file} ({data_size} bytes), {plot_file} ({plot_size} bytes)")
         
-        return json.dumps({
+        return format_output({
             "success": True,
             "data_file": data_file,
             "plot_file": plot_file,
@@ -869,14 +887,14 @@ def capture_spectrum_waterfall(
             "plot_size_bytes": plot_size,
             "statistics": result.get("statistics", {}),
             "capture_duration": result.get("capture_duration", 0)
-        }, indent=2)
+        })
         
     except Exception as e:
         logger.error(f"Spectrum waterfall capture error: {str(e)}")
-        return json.dumps({
+        return format_output({
             "success": False,
             "error": str(e)
-        }, indent=2)
+        })
 
 @mcp.tool()
 def download_file(filename: str) -> File | Image:
@@ -942,6 +960,7 @@ def cleanup_on_exit():
 def main():
     """Main entry point for the USRP MCP server"""
     import atexit
+    import sys
     
     parser = argparse.ArgumentParser(
         description="USRP FastMCP Server for Software Defined Radio control",
@@ -951,6 +970,7 @@ Examples:
   %(prog)s                           # Start HTTP server on default port 8080
   %(prog)s --port 9090               # Start HTTP server on port 9090
   %(prog)s --host 192.168.1.10       # Start on specific host
+  %(prog)s --transport stdio         # Run locally over stdio (Claude Desktop, VS Code, etc.)
   %(prog)s --help                    # Show this help
 """
     )
@@ -970,6 +990,14 @@ Examples:
     )
     
     parser.add_argument(
+        "--transport",
+        type=str,
+        default="http",
+        choices=["http", "stdio"],
+        help="Transport to use: 'http' for network access (default), 'stdio' for local MCP consumers such as Claude Desktop or VS Code"
+    )
+    
+    parser.add_argument(
         "--log-level",
         type=str,
         default="INFO",
@@ -979,11 +1007,14 @@ Examples:
     
     args = parser.parse_args()
     
-    # Configure logging
+    # When running over stdio the MCP protocol uses stdout, so all logging
+    # must be directed to stderr to avoid corrupting the data stream.
+    log_stream = sys.stderr if args.transport == "stdio" else sys.stdout
     logging.basicConfig(
         level=getattr(logging, args.log_level),
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
+        datefmt='%Y-%m-%d %H:%M:%S',
+        stream=log_stream
     )
     
     logger = logging.getLogger(__name__)
@@ -991,13 +1022,17 @@ Examples:
     # Cleanup on exit
     atexit.register(cleanup_on_exit)
     
-    # Start server with HTTP transport
-    logger.info(f"Starting USRP FastMCP server on HTTP {args.host}:{args.port}/mcp")
-    logger.info(f"Shared data directory: {get_shared_data_dir()}")
-    logger.info("Press Ctrl+C to stop the server")
-    
     try:
-        mcp.run(transport="http", host=args.host, port=args.port, path="/mcp")
+        if args.transport == "stdio":
+            logger.info("Starting USRP FastMCP server over stdio")
+            logger.info(f"Shared data directory: {get_shared_data_dir()}")
+            mcp.run(transport="stdio")
+        else:
+            # Start server with HTTP transport
+            logger.info(f"Starting USRP FastMCP server on HTTP {args.host}:{args.port}/mcp")
+            logger.info(f"Shared data directory: {get_shared_data_dir()}")
+            logger.info("Press Ctrl+C to stop the server")
+            mcp.run(transport="http", host=args.host, port=args.port, path="/mcp")
     except KeyboardInterrupt:
         logger.info("Server shutdown requested by user")
     except Exception as e:

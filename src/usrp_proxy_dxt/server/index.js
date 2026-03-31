@@ -28,6 +28,50 @@ const manifestPath = path.join(__dirname, '../manifest.json');
 const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 const VERSION = manifest.version;
 
+/**
+ * Serialize a plain JS object to TOON (Token-Oriented Object Notation).
+ * TOON is a compact, human-readable format optimised for LLM contexts.
+ * See https://toons.readthedocs.io
+ *
+ * This implementation covers the subset used by the proxy's own error
+ * messages (flat or one-level-deep objects with scalar values).
+ */
+function toTOON(obj, indent = 0) {
+  const pad = ' '.repeat(indent);
+  if (obj === null) return `${pad}null`;
+  if (typeof obj === 'boolean') return `${pad}${obj}`;
+  if (typeof obj === 'number' || typeof obj === 'string') return `${pad}${obj}`;
+
+  if (Array.isArray(obj)) {
+    if (obj.length === 0) return `[0]:`;
+    // Detect uniform-object array (all entries share the same keys)
+    if (obj.every(item => typeof item === 'object' && item !== null && !Array.isArray(item))) {
+      const keys = Object.keys(obj[0]);
+      const sameKeys = obj.every(item => JSON.stringify(Object.keys(item)) === JSON.stringify(keys));
+      if (sameKeys && keys.length > 0) {
+        const rows = obj.map(item => keys.map(k => String(item[k])).join(',')).join('\n' + ' '.repeat(indent + 2));
+        return `[${obj.length}]{${keys.join(',')}}:\n${' '.repeat(indent + 2)}${rows}`;
+      }
+    }
+    // Fallback: one line per element
+    return obj.map(item => `${pad}- ${toTOON(item, 0)}`).join('\n');
+  }
+
+  if (typeof obj === 'object') {
+    return Object.entries(obj).map(([k, v]) => {
+      if (v !== null && typeof v === 'object') {
+        return `${pad}${k}:\n${toTOON(v, indent + 2)}`;
+      }
+      const scalar = (v === null) ? 'null'
+        : (typeof v === 'boolean') ? String(v)
+        : String(v);
+      return `${pad}${k}: ${scalar}`;
+    }).join('\n');
+  }
+
+  return `${pad}${String(obj)}`;
+}
+
 class USRPProxyServer {
   constructor() {
     this.server = new Server(
@@ -258,7 +302,7 @@ class USRPProxyServer {
       this.logError(`Remote tool call failed for ${toolName}`, error);
       
       // Return a structured error response instead of throwing
-      return JSON.stringify({
+      return toTOON({
         success: false,
         error: error.message,
         tool: toolName,
@@ -268,7 +312,7 @@ class USRPProxyServer {
           session_id: this.sessionId,
           error_type: error.constructor.name
         }
-      }, null, 2);
+      });
     }
   }
 
@@ -628,12 +672,12 @@ class USRPProxyServer {
           content: [
             {
               type: "text",
-              text: JSON.stringify({
+              text: toTOON({
                 success: false,
                 error: error.message,
                 tool: name,
                 timestamp: new Date().toISOString(),
-              }, null, 2),
+              }),
             },
           ],
           isError: true,
