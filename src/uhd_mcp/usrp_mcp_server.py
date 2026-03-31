@@ -20,6 +20,13 @@ try:
 except ImportError:
     _TOONS_AVAILABLE = False
 
+from .utils import (
+    parse_uhd_find_devices_output, 
+    parse_uhd_config_info_output,
+    get_shared_data_dir,
+    capture_spectrum_waterfall as _capture_spectrum_waterfall
+)
+
 
 def format_output(data) -> str:
     """
@@ -31,13 +38,6 @@ def format_output(data) -> str:
     if _TOONS_AVAILABLE:
         return _toons.dumps(data)
     return json.dumps(data, indent=2)
-
-from .utils import (
-    parse_uhd_find_devices_output, 
-    parse_uhd_config_info_output,
-    get_shared_data_dir,
-    capture_spectrum_waterfall as _capture_spectrum_waterfall
-)
 
 # Create the MCP server
 mcp = FastMCP("USRP Control Server")
