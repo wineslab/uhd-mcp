@@ -26,6 +26,7 @@
   "license": "All rights reserved",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.16.0",
+    "@toon-format/toon": "^2.1.0",
     "node-fetch": "^3.3.2"
   },
   "devDependencies": {

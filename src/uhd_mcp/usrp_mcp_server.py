@@ -6,7 +6,6 @@ FastMCP Server for USRP Control via UHD and GNU Radio
 from fastmcp import FastMCP
 from fastmcp.utilities.types import File, Image
 import subprocess
-import json
 import os
 import logging
 from typing import Optional, Dict, Any
@@ -14,11 +13,7 @@ import threading
 import time
 import argparse
 
-try:
-    import toons as _toons
-    _TOONS_AVAILABLE = True
-except ImportError:
-    _TOONS_AVAILABLE = False
+import toons
 
 from .utils import (
     parse_uhd_find_devices_output, 
@@ -30,14 +25,10 @@ from .utils import (
 
 def format_output(data) -> str:
     """
-    Serialize tool output using TOON notation when available, falling back to JSON.
-
-    TOON (Token-Oriented Object Notation) is a compact, human-readable format
-    optimised for Large Language Model contexts.  See https://toons.readthedocs.io
+    Serialize tool output using TOON (Token-Oriented Object Notation) — a compact,
+    human-readable format optimised for LLM contexts. See https://toons.readthedocs.io
     """
-    if _TOONS_AVAILABLE:
-        return _toons.dumps(data)
-    return json.dumps(data, indent=2)
+    return toons.dumps(data)
 
 # Create the MCP server
 mcp = FastMCP("USRP Control Server")
