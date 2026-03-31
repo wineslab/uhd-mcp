@@ -23,13 +23,6 @@ from .utils import (
 )
 
 
-def format_output(data) -> str:
-    """
-    Serialize tool output using TOON (Token-Oriented Object Notation) — a compact,
-    human-readable format optimised for LLM contexts. See https://toons.readthedocs.io
-    """
-    return toons.dumps(data)
-
 # Create the MCP server
 mcp = FastMCP("USRP Control Server")
 
@@ -54,7 +47,7 @@ def uhd_find_devices() -> str:
             parsed_devices = parse_uhd_find_devices_output(result.stdout)
             logger.info(f"Found {len(parsed_devices) if parsed_devices else 0} UHD devices")
             
-            return format_output({
+            return toons.dumps({
                 "command": "uhd_find_devices",
                 "return_code": result.returncode,
                 "success": True,
@@ -64,7 +57,7 @@ def uhd_find_devices() -> str:
             })
         else:
             logger.warning("uhd_find_devices failed or returned no output")
-            return format_output({
+            return toons.dumps({
                 "command": "uhd_find_devices",
                 "return_code": result.returncode,
                 "stdout": result.stdout,
@@ -129,7 +122,7 @@ def uhd_usrp_probe(args: str = "") -> str:
             timeout=60  # Increased timeout for probe operations
         )
         
-        return format_output({
+        return toons.dumps({
             "command": " ".join(cmd),
             "return_code": result.returncode,
             "stdout": result.stdout,
@@ -279,7 +272,7 @@ def uhd_siggen(
         elif waveform_type.lower() == "sweep":
             cmd.append("--sweep")
         else:
-            return format_output({
+            return toons.dumps({
                 "error": f"Invalid waveform_type '{waveform_type}'. Must be one of: sine, const, gaussian, uniform, 2tone, sweep",
                 "success": False
             })
@@ -340,7 +333,7 @@ def uhd_siggen(
                 message = f"Signal generation started for {duration} seconds. Will stop automatically or use stop_process('{process_id}') to stop early."
                 logger.info(f"Process {process_id} started for {duration} seconds")
             
-            return format_output({
+            return toons.dumps({
                 "process_id": process_id,
                 "command": " ".join(cmd),
                 "status": "running",
@@ -356,7 +349,7 @@ def uhd_siggen(
             if process_id in running_processes:
                 del running_processes[process_id]
             
-            return format_output({
+            return toons.dumps({
                 "process_id": process_id,
                 "command": " ".join(cmd),
                 "return_code": process.returncode,
@@ -414,7 +407,7 @@ def stop_process(process_id: str) -> str:
             
             logger.info(f"Process {process_id} stopped successfully after {round(runtime, 2)} seconds")
             
-            return format_output({
+            return toons.dumps({
                 "process_id": process_id,
                 "command": process_info["command"],
                 "status": "stopped",
@@ -433,7 +426,7 @@ def stop_process(process_id: str) -> str:
             
             del running_processes[process_id]
             
-            return format_output({
+            return toons.dumps({
                 "process_id": process_id,
                 "command": process_info["command"],
                 "status": "already_terminated",
@@ -480,7 +473,7 @@ def list_processes() -> str:
     for process_id in terminated_ids:
         del running_processes[process_id]    
 
-    return format_output(processes_info)
+    return toons.dumps(processes_info)
 
 @mcp.tool()
 def uhd_rx_cfile(
@@ -615,7 +608,7 @@ def uhd_rx_cfile(
             samples_captured = 0
             logger.warning("No output file created during capture")
         
-        return format_output({
+        return toons.dumps({
             "command": " ".join(cmd),
             "return_code": result.returncode,
             "stdout": result.stdout,
@@ -636,19 +629,19 @@ def uhd_rx_cfile(
         })
         
     except subprocess.TimeoutExpired:
-        return format_output({
+        return toons.dumps({
             "success": False,
             "error": "Command timed out",
             "message": f"uhd_rx_cfile timed out after {timeout} seconds"
         })
     except FileNotFoundError:
-        return format_output({
+        return toons.dumps({
             "success": False,
             "error": "uhd_rx_cfile not found. Make sure GNU Radio and UHD are installed.",
             "command": "uhd_rx_cfile"
         })
     except Exception as e:
-        return format_output({
+        return toons.dumps({
             "success": False,
             "error": str(e),
             "command": "uhd_rx_cfile"
@@ -676,7 +669,7 @@ def list_shared_files(file_type: str = "all") -> str:
         
         # Check if directory exists
         if not os.path.exists(shared_data_dir):
-            return format_output({
+            return toons.dumps({
                 "success": False,
                 "error": f"Shared data directory {shared_data_dir} does not exist",
                 "files": []
@@ -732,7 +725,7 @@ def list_shared_files(file_type: str = "all") -> str:
                 })
         
         except PermissionError:
-            return format_output({
+            return toons.dumps({
                 "success": False,
                 "error": f"Permission denied accessing {shared_data_dir}",
                 "files": []
@@ -743,7 +736,7 @@ def list_shared_files(file_type: str = "all") -> str:
         
         logger.info(f"Listed {len(files_info)} files in shared data layer (filter: {file_type})")
         
-        return format_output({
+        return toons.dumps({
             "success": True,
             "shared_data_dir": shared_data_dir,
             "filter_applied": file_type,
@@ -753,7 +746,7 @@ def list_shared_files(file_type: str = "all") -> str:
         
     except Exception as e:
         logger.error(f"Error listing shared files: {str(e)}")
-        return format_output({
+        return toons.dumps({
             "success": False,
             "error": str(e),
             "files": []
@@ -800,10 +793,10 @@ def get_uhd_info() -> str:
         else:
             response["error"] = "Failed to get UHD configuration information"
         
-        return format_output(response)
+        return toons.dumps(response)
         
     except FileNotFoundError:
-        return format_output({
+        return toons.dumps({
             "error": "UHD tools not found in PATH",
             "uhd_tools_available": False
         })
@@ -855,7 +848,7 @@ def capture_spectrum_waterfall(
         if not result.get("success", False):
             error_msg = result.get("error", "Unknown error")
             logger.error(f"Spectrum waterfall capture failed: {error_msg}")
-            return format_output({
+            return toons.dumps({
                 "success": False,
                 "error": error_msg
             })
@@ -868,7 +861,7 @@ def capture_spectrum_waterfall(
         
         logger.info(f"Spectrum waterfall captured: {data_file} ({data_size} bytes), {plot_file} ({plot_size} bytes)")
         
-        return format_output({
+        return toons.dumps({
             "success": True,
             "data_file": data_file,
             "plot_file": plot_file,
@@ -882,7 +875,7 @@ def capture_spectrum_waterfall(
         
     except Exception as e:
         logger.error(f"Spectrum waterfall capture error: {str(e)}")
-        return format_output({
+        return toons.dumps({
             "success": False,
             "error": str(e)
         })
