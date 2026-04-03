@@ -100,11 +100,15 @@ No proxy is needed when `--transport stdio` is used.  The server process is star
 }
 ```
 
-**OpenWebUI** — add a Tools server pointing to the HTTP endpoint:
+**OpenWebUI** — connect via **Admin Panel → Settings → Tools → Add MCP Server**:
 
-```
-http://<host>:<port>/mcp
-```
+| Field | Value |
+|-------|-------|
+| URL | `http://<host>:<port>/mcp` |
+| OpenAPI Spec URL | `http://<host>:<port>/mcp` (same as URL — this is the MCP SSE endpoint, not a separate spec file) |
+| Auth | None |
+
+> **Note**: the "OpenAPI Spec URL" field shown by OpenWebUI refers to the endpoint it will probe for tool discovery. For MCP servers backed by FastMCP the same SSE path (`/mcp`) serves that purpose — do **not** append `/openapi.json` (no such route exists). Set Auth to **None** unless you have placed the server behind an authenticating reverse proxy.
 
 ## TOON Output Format
 
