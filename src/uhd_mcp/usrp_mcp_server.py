@@ -29,6 +29,11 @@ mcp = FastMCP("USRP Control Server")
 # Global variable to track running processes
 running_processes = {}
 
+# Seconds to wait after spawning a background UHD process before checking whether
+# it is still alive.  USRP hardware initialization typically takes 1-3 seconds, so
+# this value must be large enough to catch hardware-not-found / init failures.
+USRP_INIT_WAIT_SECONDS = 2.0
+
 @mcp.tool()
 def uhd_find_devices() -> str:
     """Find all connected UHD devices"""
@@ -62,7 +67,7 @@ def uhd_find_devices() -> str:
                 "return_code": result.returncode,
                 "stdout": result.stdout,
                 "stderr": result.stderr,
-                "success": result.returncode == 0,
+                "success": False,
                 "error": "No devices found or command failed"
             })
         
@@ -321,8 +326,10 @@ def uhd_siggen(
             timer_thread = threading.Thread(target=stop_after_duration, daemon=True)
             timer_thread.start()
         
-        # Always return immediately with appropriate message
-        time.sleep(0.5)  # Brief pause to check if process started successfully
+        # Wait long enough for USRP initialization to fail if the device is unavailable.
+        # UHD devices typically take 1-3 seconds to initialize, so 0.5 s was too short
+        # to catch hardware-not-found or initialization errors.
+        time.sleep(USRP_INIT_WAIT_SECONDS)
         
         if process.poll() is None:
             # Process is running
@@ -435,7 +442,7 @@ def stop_process(process_id: str) -> str:
                 "duration": duration,
                 "stdout": stdout,
                 "stderr": stderr,
-                "success": True
+                "success": process.returncode == 0
             })
             
     except Exception as e:
@@ -613,7 +620,7 @@ def uhd_rx_cfile(
             "return_code": result.returncode,
             "stdout": result.stdout,
             "stderr": result.stderr,
-            "success": result.returncode == 0,
+            "success": result.returncode == 0 and file_created,
             "capture_info": {
                 "freq": freq,
                 "samp_rate": samp_rate,
