@@ -386,6 +386,7 @@ def stop_process(process_id: str) -> str:
     try:
         process_info = running_processes[process_id]
         process = process_info["process"]
+        is_rx_cfile = process_info.get("type") == "rx_cfile"
         
         if process.poll() is None:
             # Process is still running - try graceful stop first (press enter)
@@ -414,7 +415,7 @@ def stop_process(process_id: str) -> str:
             
             logger.info(f"Process {process_id} stopped successfully after {round(runtime, 2)} seconds")
             
-            return toons.dumps({
+            response = {
                 "process_id": process_id,
                 "command": process_info["command"],
                 "status": "stopped",
@@ -422,8 +423,12 @@ def stop_process(process_id: str) -> str:
                 "duration": duration,
                 "stdout": stdout,
                 "stderr": stderr,
-                "success": True
-            })
+                "success": True,
+            }
+            if is_rx_cfile:
+                response.update(_rx_cfile_capture_info(process_info))
+                logger.info(f"rx_cfile capture info added for {process_id}")
+            return toons.dumps(response)
         else:
             # Process already terminated
             logger.info(f"Process {process_id} was already terminated")
@@ -433,7 +438,7 @@ def stop_process(process_id: str) -> str:
             
             del running_processes[process_id]
             
-            return toons.dumps({
+            response = {
                 "process_id": process_id,
                 "command": process_info["command"],
                 "status": "already_terminated",
@@ -442,8 +447,15 @@ def stop_process(process_id: str) -> str:
                 "duration": duration,
                 "stdout": stdout,
                 "stderr": stderr,
-                "success": process.returncode == 0
-            })
+                "success": process.returncode == 0,
+            }
+            if is_rx_cfile:
+                capture = _rx_cfile_capture_info(process_info)
+                # A zero exit code with no file is still a failure
+                response["success"] = process.returncode == 0 and capture["file_created"]
+                response.update(capture)
+                logger.info(f"rx_cfile capture info added for {process_id}")
+            return toons.dumps(response)
             
     except Exception as e:
         return f"Error stopping process: {str(e)}"
@@ -482,12 +494,49 @@ def list_processes() -> str:
 
     return toons.dumps(processes_info)
 
+def _rx_cfile_capture_info(process_info: Dict[str, Any]) -> Dict[str, Any]:
+    """Build capture result info from a finished rx_cfile process entry."""
+    filename = process_info["filename"]
+    output_shorts = process_info["output_shorts"]
+    samp_rate = process_info["samp_rate"]
+
+    file_created = os.path.exists(filename)
+    try:
+        file_size = os.path.getsize(filename) if file_created else 0
+    except OSError:
+        file_size = 0
+        file_created = False
+
+    if file_created:
+        bytes_per_sample = 4 if output_shorts else 8
+        samples_captured = file_size // bytes_per_sample
+    else:
+        samples_captured = 0
+
+    duration_seconds = (samples_captured / samp_rate) if (samples_captured > 0 and samp_rate > 0) else 0
+
+    return {
+        "output_file": filename,
+        "file_created": file_created,
+        "file_size_bytes": file_size,
+        "capture_info": {
+            "freq": process_info["freq"],
+            "samp_rate": samp_rate,
+            "gain": process_info.get("gain"),
+            "samples_requested": process_info.get("nsamples"),
+            "samples_captured": samples_captured,
+            "duration_seconds": duration_seconds,
+            "output_format": "16-bit complex shorts" if output_shorts else "32-bit complex floats",
+        },
+    }
+
+
 @mcp.tool()
 def uhd_rx_cfile(
     freq: float,
     # Core UHD parameters from manpage
     args: Optional[str] = None,  # UHD device address args
-    spec: Optional[str] = None,  # Subdevice specification  
+    spec: Optional[str] = None,  # Subdevice specification
     antenna: Optional[str] = None,  # Select Rx antenna
     samp_rate: float = 1e6,  # Sample rate (bandwidth)
     gain: Optional[float] = None,  # Gain in dB (default: midpoint)
@@ -500,7 +549,7 @@ def uhd_rx_cfile(
 ) -> str:
     """
     Capture I/Q samples from USRP to complex file using GNU Radio uhd_rx_cfile
-    
+
     Based on official manpage parameters:
         freq: RF center frequency in Hz (required)
         args: UHD device address args (e.g., "addr=192.168.10.2")
@@ -513,145 +562,175 @@ def uhd_rx_cfile(
         nsamples: Number of samples to collect (default: infinite)
         verbose: Verbose output
         additional_args: Additional command-line arguments
-        
-    Returns filename of captured data file.
+
+    The capture runs as a background process. A process_id is returned so that
+    you can monitor it with list_processes() and retrieve the final results
+    (including file path and sample count) by calling stop_process(process_id)
+    once the capture has finished or to stop it early.
     """
     try:
         logger = logging.getLogger(__name__)
-        
+
+        if samp_rate <= 0:
+            return toons.dumps({
+                "success": False,
+                "error": "samp_rate must be greater than 0",
+                "command": "uhd_rx_cfile",
+            })
+
         # Get the shared data layer directory
         shared_data_dir = get_shared_data_dir()
-        
+
         # Ensure the directory exists (create if needed)
         os.makedirs(shared_data_dir, exist_ok=True)
-        
+
         # Generate unique filename with timestamp
         timestamp = int(time.time())
         extension = ".cfile" if not output_shorts else ".sfile"
         filename_base = f"uhd_rx_{timestamp}_{int(freq/1e6)}MHz{extension}"
         filename = os.path.join(shared_data_dir, filename_base)
-        
+
         cmd = ["uhd_rx_cfile"]
-        
+
         # Required frequency argument
         cmd.extend(["-f", str(freq)])
-        
+
         # UHD device arguments
         if args:
             cmd.extend(["-a", args])
-        
+
         # Subdevice specification
         if spec:
             cmd.extend(["--spec", spec])
-        
+
         # Antenna selection
         if antenna:
             cmd.extend(["-A", antenna])
-        
+
         # Sample rate
         cmd.extend(["--samp-rate", str(samp_rate)])
-        
+
         # Gain settings
         if gain is not None:
             cmd.extend(["-g", str(gain)])
-        
+
         # LO offset
         if lo_offset is not None:
             cmd.extend(["--lo-offset", str(lo_offset)])
-        
+
         # Output format
         if output_shorts:
             cmd.append("-s")
-        
+
         # Number of samples
         if nsamples is not None:
             cmd.extend(["-N", str(nsamples)])
-        
+
         # Verbose output
         if verbose:
             cmd.append("-v")
-        
+
         # Additional arguments
         if additional_args:
             cmd.extend(additional_args.split())
-        
+
         # Output filename (must be last)
         cmd.append(filename)
-        
-        # Calculate expected duration for timeout
-        if nsamples is not None:
-            duration = nsamples / samp_rate
-            timeout = max(60, duration + 30)
-            logger.info(f"Starting uhd_rx_cfile: {nsamples} samples at {freq} Hz (estimated {duration:.2f}s) -> {filename}")
-        else:
-            # For infinite capture, use a reasonable timeout
-            timeout = 300  # 5 minutes max
-            logger.info(f"Starting uhd_rx_cfile: infinite capture at {freq} Hz (max {timeout}s timeout) -> {filename}")
-        
+
+        # Generate a process ID
+        process_id = f"rx_cfile_{int(time.time())}"
+
+        logger.info(f"Starting uhd_rx_cfile process {process_id} with command: {' '.join(cmd)}")
         logger.debug(f"Running command: {' '.join(cmd)}")
-        
-        result = subprocess.run(
+
+        # Start the process with piped stdout/stderr so output can be read later
+        process = subprocess.Popen(
             cmd,
-            capture_output=True,
-            text=True,
-            timeout=timeout
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
         )
-        
-        # Check if file was created and get its size
-        file_created = os.path.exists(filename)
-        file_size = os.path.getsize(filename) if file_created else 0
-        
-        # Calculate number of samples captured based on file size
-        if file_created:
-            if output_shorts:
-                # 16-bit complex shorts (4 bytes per sample: 2 bytes I + 2 bytes Q)
-                samples_captured = file_size // 4
-            else:
-                # 32-bit complex floats (8 bytes per sample: 4 bytes I + 4 bytes Q)
-                samples_captured = file_size // 8
-            
-            logger.info(f"Capture completed: {samples_captured} samples captured, file size: {file_size} bytes, saved to: {filename}")
-        else:
-            samples_captured = 0
-            logger.warning("No output file created during capture")
-        
-        return toons.dumps({
+
+        # Store process metadata for later retrieval by stop_process
+        running_processes[process_id] = {
+            "process": process,
             "command": " ".join(cmd),
-            "return_code": result.returncode,
-            "stdout": result.stdout,
-            "stderr": result.stderr,
-            "success": result.returncode == 0 and file_created,
-            "capture_info": {
-                "freq": freq,
-                "samp_rate": samp_rate,
-                "gain": gain,
-                "samples_requested": nsamples,
-                "samples_captured": samples_captured,
-                "duration_seconds": samples_captured / samp_rate if samples_captured > 0 else 0,
-                "output_format": "16-bit complex shorts" if output_shorts else "32-bit complex floats"
-            },
-            "output_file": filename,
-            "file_created": file_created,
-            "file_size_bytes": file_size
-        })
-        
-    except subprocess.TimeoutExpired:
-        return toons.dumps({
-            "success": False,
-            "error": "Command timed out",
-            "message": f"uhd_rx_cfile timed out after {timeout} seconds"
-        })
+            "start_time": time.time(),
+            "duration": nsamples / samp_rate if nsamples is not None else None,
+            "type": "rx_cfile",
+            "filename": filename,
+            "output_shorts": output_shorts,
+            "samp_rate": samp_rate,
+            "freq": freq,
+            "nsamples": nsamples,
+            "gain": gain,
+        }
+
+        # Wait long enough for USRP initialization to fail if the device is unavailable.
+        # UHD devices typically take 1-3 seconds to initialize, so a short wait is needed
+        # to catch hardware-not-found or initialization errors before reporting success.
+        time.sleep(USRP_INIT_WAIT_SECONDS)
+
+        if process.poll() is None:
+            # Process is still running — hardware initialized successfully
+            if nsamples is not None:
+                duration_est = nsamples / samp_rate
+                message = (
+                    f"Capture started: {nsamples} samples at {freq} Hz "
+                    f"(estimated {duration_est:.1f}s). "
+                    f"Use stop_process('{process_id}') to retrieve results or stop early."
+                )
+            else:
+                message = (
+                    f"Continuous capture started at {freq} Hz. "
+                    f"Use stop_process('{process_id}') to stop and retrieve results."
+                )
+            logger.info(f"Process {process_id} started successfully")
+
+            return toons.dumps({
+                "process_id": process_id,
+                "command": " ".join(cmd),
+                "status": "running",
+                "pid": process.pid,
+                "success": True,
+                "output_file": filename,
+                "message": message,
+                "capture_params": {
+                    "freq": freq,
+                    "samp_rate": samp_rate,
+                    "gain": gain,
+                    "nsamples": nsamples,
+                    "output_format": "16-bit complex shorts" if output_shorts else "32-bit complex floats",
+                },
+            })
+        else:
+            # Process terminated immediately — hardware not found or other error
+            logger.warning(f"Process {process_id} terminated immediately")
+            stdout, stderr = process.communicate()
+            if process_id in running_processes:
+                del running_processes[process_id]
+
+            return toons.dumps({
+                "process_id": process_id,
+                "command": " ".join(cmd),
+                "return_code": process.returncode,
+                "stdout": stdout,
+                "stderr": stderr,
+                "success": False,
+                "message": "Process terminated immediately. Check stderr for hardware errors.",
+            })
+
     except FileNotFoundError:
         return toons.dumps({
             "success": False,
             "error": "uhd_rx_cfile not found. Make sure GNU Radio and UHD are installed.",
-            "command": "uhd_rx_cfile"
+            "command": "uhd_rx_cfile",
         })
     except Exception as e:
         return toons.dumps({
             "success": False,
             "error": str(e),
-            "command": "uhd_rx_cfile"
+            "command": "uhd_rx_cfile",
         })
 
 @mcp.tool()
