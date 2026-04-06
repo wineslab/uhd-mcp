@@ -5,6 +5,8 @@ FastMCP Server for USRP Control via UHD and GNU Radio
 
 from fastmcp import FastMCP
 from fastmcp.utilities.types import File, Image
+from starlette.middleware import Middleware
+from starlette.middleware.cors import CORSMiddleware
 import subprocess
 import os
 import logging
@@ -1037,11 +1039,12 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  %(prog)s                           # Start HTTP server on default port 8080
-  %(prog)s --port 9090               # Start HTTP server on port 9090
-  %(prog)s --host 192.168.1.10       # Start on specific host
-  %(prog)s --transport stdio         # Run locally over stdio (Claude Desktop, VS Code, etc.)
-  %(prog)s --help                    # Show this help
+  %(prog)s                                              # Start HTTP server on default port 8080
+  %(prog)s --port 9090                                  # Start HTTP server on port 9090
+  %(prog)s --host 192.168.1.10                          # Start on specific host
+  %(prog)s --cors-origins https://myapp.example.com     # Restrict CORS to a specific origin
+  %(prog)s --transport stdio                            # Run locally over stdio (Claude Desktop, VS Code, etc.)
+  %(prog)s --help                                       # Show this help
 """
     )
     
@@ -1065,6 +1068,15 @@ Examples:
         default="http",
         choices=["http", "stdio"],
         help="Transport to use: 'http' for network access (default), 'stdio' for local MCP consumers such as Claude Desktop or VS Code"
+    )
+    
+    parser.add_argument(
+        "--cors-origins",
+        type=str,
+        default="*",
+        help="Comma-separated list of allowed CORS origins for the HTTP server (default: '*' — allow all). "
+             "Example: 'https://myapp.example.com,http://localhost:3000'. "
+             "Restrict this in production environments."
     )
     
     parser.add_argument(
@@ -1098,11 +1110,24 @@ Examples:
             logger.info(f"Shared data directory: {get_shared_data_dir()}")
             mcp.run(transport="stdio")
         else:
-            # Start server with HTTP transport
+            # Start server with HTTP transport, with CORS middleware so that
+            # browser-based clients (e.g. OpenWebUI) can make cross-origin requests.
+            allowed_origins = [o.strip() for o in args.cors_origins.split(",") if o.strip()]
+            cors_middleware = [
+                Middleware(
+                    CORSMiddleware,
+                    allow_origins=allowed_origins,
+                    # MCP streamable-HTTP uses GET (SSE stream), POST (requests),
+                    # DELETE (session teardown) and OPTIONS (preflight).
+                    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+                    # Headers required by the MCP protocol and standard browsers.
+                    allow_headers=["Content-Type", "Accept", "mcp-session-id", "Last-Event-ID"],
+                )
+            ]
             logger.info(f"Starting USRP FastMCP server on HTTP {args.host}:{args.port}/mcp")
             logger.info(f"Shared data directory: {get_shared_data_dir()}")
             logger.info("Press Ctrl+C to stop the server")
-            mcp.run(transport="http", host=args.host, port=args.port, path="/mcp")
+            mcp.run(transport="http", host=args.host, port=args.port, path="/mcp", middleware=cors_middleware)
     except KeyboardInterrupt:
         logger.info("Server shutdown requested by user")
     except Exception as e:

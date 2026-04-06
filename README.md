@@ -104,11 +104,11 @@ No proxy is needed when `--transport stdio` is used.  The server process is star
 
 | Field | Value |
 |-------|-------|
-| URL | `http://<host>:<port>/mcp` |
-| OpenAPI Spec URL | `http://<host>:<port>/mcp` (same as URL — this is the MCP SSE endpoint, not a separate spec file) |
+| URL | `http://<host>:<port>` |
+| OpenAPI Spec URL | `/mcp` |
 | Auth | None |
 
-> **Note**: the "OpenAPI Spec URL" field shown by OpenWebUI refers to the endpoint it will probe for tool discovery. For MCP servers backed by FastMCP the same SSE path (`/mcp`) serves that purpose — do **not** append `/openapi.json` (no such route exists). Set Auth to **None** unless you have placed the server behind an authenticating reverse proxy.
+> **Note**: the server exposes its MCP endpoint at `/mcp`. In OpenWebUI, set **URL** to the server root (e.g. `http://192.168.1.10:8080`) and **OpenAPI Spec URL** to `/mcp`. Set Auth to **None** unless the server sits behind an authenticating reverse proxy. CORS is enabled for all origins by default (`*`); use `--cors-origins` to restrict access in production (e.g. `--cors-origins https://my-openwebui.example.com`).
 
 ## TOON Output Format
 
