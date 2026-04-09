@@ -65,6 +65,5 @@ jobs:
           usrp-proxy-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.dxt
           checksums.txt
         draft: false
-        prerelease: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
