@@ -1,6 +1,6 @@
 {
   "name": "usrp-proxy-dxt",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "USRP MCP Proxy Desktop Extension",
   "main": "server/index.js",
   "type": "module",
@@ -26,6 +26,7 @@
   "license": "All rights reserved",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.16.0",
+    "@toon-format/toon": "^2.1.0",
     "node-fetch": "^3.3.2"
   },
   "devDependencies": {

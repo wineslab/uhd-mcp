@@ -3,7 +3,7 @@
   "name": "usrp-proxy",
   "display_name": "USRP MCP Proxy",
   "icon": "icon.png",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Local MCP proxy for remote USRP MCP server with spectrum analyzer, file download, and SDR capabilities",
   "long_description": "This extension provides a local MCP proxy that connects to a remote USRP MCP server, enabling Claude Desktop to control software-defined radio equipment and spectrum analyzers. Features comprehensive signal generation with 25+ parameters, GNU Radio integration for data capture, spectrum waterfall analysis from Keysight EXA analyzers, file download from shared data layer, background process management, and professional logging. Includes device discovery, hardware probing, spectrum analysis, file management, and complete radio hardware control through a clean MCP interface.",
   "author": {
