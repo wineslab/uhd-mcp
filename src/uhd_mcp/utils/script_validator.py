@@ -15,7 +15,6 @@ ALLOWED_IMPORTS: frozenset = frozenset({
     "np",       # common numpy alias
     "math",
     "time",
-    "sys",      # only sys.argv / sys.exit are used but we block at call level
     "collections",
     "functools",
     "itertools",
@@ -79,7 +78,8 @@ FORBIDDEN_IMPORTS: frozenset = frozenset({
     "grp",
 })
 
-# Built-in names that must not be called in the script
+# Built-in names that must not be called in the script.
+# print() is intentionally omitted: scripts are allowed to print output.
 FORBIDDEN_BUILTINS: frozenset = frozenset({
     "exec",
     "eval",
@@ -87,7 +87,6 @@ FORBIDDEN_BUILTINS: frozenset = frozenset({
     "open",
     "__import__",
     "input",
-    "print",   # allow; see _is_print_call below — actually we allow print
     "globals",
     "locals",
     "vars",
@@ -100,9 +99,6 @@ FORBIDDEN_BUILTINS: frozenset = frozenset({
     "memoryview",
     "bytearray",
 })
-
-# Actually we allow print; remove it from the set
-FORBIDDEN_BUILTINS = FORBIDDEN_BUILTINS - {"print"}
 
 # Attributes that signal unsafe access patterns
 FORBIDDEN_ATTRIBUTE_CHAINS: List[Tuple[str, str]] = [
