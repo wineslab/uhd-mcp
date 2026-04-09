@@ -20,6 +20,7 @@ import fetch from "node-fetch";
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { encode as toonEncode } from '@toon-format/toon';
 
 // Read version from manifest.json
 const __filename = fileURLToPath(import.meta.url);
@@ -258,7 +259,7 @@ class USRPProxyServer {
       this.logError(`Remote tool call failed for ${toolName}`, error);
       
       // Return a structured error response instead of throwing
-      return JSON.stringify({
+      return toonEncode({
         success: false,
         error: error.message,
         tool: toolName,
@@ -268,7 +269,7 @@ class USRPProxyServer {
           session_id: this.sessionId,
           error_type: error.constructor.name
         }
-      }, null, 2);
+      });
     }
   }
 
@@ -628,12 +629,12 @@ class USRPProxyServer {
           content: [
             {
               type: "text",
-              text: JSON.stringify({
+              text: toonEncode({
                 success: false,
                 error: error.message,
                 tool: name,
                 timestamp: new Date().toISOString(),
-              }, null, 2),
+              }),
             },
           ],
           isError: true,

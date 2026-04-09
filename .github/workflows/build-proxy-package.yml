@@ -2,9 +2,7 @@ name: Build and Package USRP Proxy Extension
 
 on:
   push:
-    branches: [ develop ]
-  pull_request:
-    branches: [ develop ]
+    branches: [ main ]
 
 jobs:
   build-proxy:
@@ -19,7 +17,7 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '20'
+        node-version: '24'
         
     - name: Install dependencies and dev tools
       working-directory: src/usrp_proxy_dxt
