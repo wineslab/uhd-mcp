@@ -43,12 +43,6 @@ spec:
           env:
             - name: MCP_SHARED_DATA_DIR
               value: "/app/uhd-mcp/shared-data-layer"
-            - name: VNC_HOST
-              value: "127.0.0.1"
-            - name: VNC_PORT
-              value: "5900"
-            - name: VNC_PASSWORD
-              value: "1234"
             - name: PAT_TOKEN
               valueFrom:
                 secretKeyRef:

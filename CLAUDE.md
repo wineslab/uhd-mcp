@@ -50,7 +50,6 @@ A separate **Node.js** MCP server (Desktop Extension, DXT spec v0.1) that bridge
 - `MCP_SHARED_DATA_DIR` — where captures/plots/downloads live.
 - `SA_HOST` / `SA_PORT` / `SA_TIMEOUT` — Keysight spectrum analyzer connection (defaults in `get_analyzer_config`).
 - `PAT_TOKEN` — if set, `start.sh` runs `update-repo.sh` to `git pull` latest before launching (used by the container deployment, see [deploy/](deploy/)).
-- `VNC_HOST` / `VNC_PORT` / `VNC_PASSWORD` — set by the deployment manifest but **currently unused**: the VNC utility (`utils/vnc.py`, still referenced by the dead `test-vnc` script in `pyproject.toml`) has been removed from the source. Treat these as legacy.
 
 ## Deployment
 

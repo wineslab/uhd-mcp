@@ -1,0 +1,36 @@
+name: Run Tests on PR
+
+on:
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Non-Hardware Unit & Integration Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run non-hardware tests
+        run: |
+          pytest tests/mcp_server/test_script_validation.py \
+                 tests/mcp_server/test_guardrails.py \
+                 tests/mcp_server/test_script_executor.py \
+                 tests/mcp_server/test_execute_uhd_script_tool.py \
+                 tests/mcp_server/test_integration_no_hw.py \
+                 -v --tb=short
