@@ -1,8 +1,5 @@
 # UHD MCP Deployment
 
-## Docker Image
-Dockerfile location is at https://github.com/wineslab/openshift-dockerfiles/blob/main/dockerfiles/your-namespace/Dockerfile-uhd-mcp
-
 ## Deployment Setup
 
 ### 1. GitHub PAT Token Secret
@@ -10,6 +7,7 @@ Dockerfile location is at https://github.com/wineslab/openshift-dockerfiles/blob
 Before deploying, create a GitHub Personal Access Token (PAT) and configure it as a Kubernetes secret:
 
 #### Option A: Using kubectl (Recommended)
+
 ```bash
 kubectl create secret generic github-pat-secret \
   --from-literal=token=your-actual-github-pat-token \
@@ -17,17 +15,22 @@ kubectl create secret generic github-pat-secret \
 ```
 
 #### Option B: Using the YAML file
+
 1. Edit `github-pat-secret.yaml`
 2. Replace the base64 encoded token with your actual token:
+
    ```bash
    echo -n 'your-actual-github-pat-token' | base64
    ```
+
 3. Apply the secret:
+
    ```bash
    kubectl apply -f github-pat-secret.yaml
    ```
 
 ### 2. Deploy the Application
+
 ```bash
 kubectl apply -f deployment.yaml
 kubectl apply -f service.yaml
