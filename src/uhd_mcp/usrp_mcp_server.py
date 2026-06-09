@@ -1031,7 +1031,11 @@ _guardrails = Guardrails()
 
 
 @mcp.tool()
-def execute_uhd_script(script: str, metadata: Optional[Dict[str, Any]] = None) -> str:
+def execute_uhd_script(
+    script: str,
+    metadata: Optional[Dict[str, Any]] = None,
+    unsafe: bool = False,
+) -> str:
     """
     Execute an agent-generated Python script that uses UHD APIs.
 
@@ -1049,6 +1053,13 @@ def execute_uhd_script(script: str, metadata: Optional[Dict[str, Any]] = None) -
                     freq           – center frequency in Hz (guardrail checked)
                     sample_rate    – sample rate in Hz (guardrail checked)
                     duration       – transmission duration in seconds (guardrail checked)
+        unsafe:   DANGEROUS. When True, BOTH the AST validation and the hardware
+                  safety guardrails are skipped, and the script runs with the
+                  full parent environment (unrestricted file/network I/O). Only
+                  the execution timeout still applies. Use exclusively for
+                  trusted scripts that legitimately need file I/O or modules the
+                  sandbox forbids; it removes all protection against unsafe
+                  hardware settings and arbitrary system access.
 
     Returns:
         JSON string with execution result including stdout, stderr, return_code,
@@ -1062,42 +1073,52 @@ def execute_uhd_script(script: str, metadata: Optional[Dict[str, Any]] = None) -
     tool_logger = logging.getLogger(__name__)
     metadata = metadata or {}
 
-    # ------------------------------------------------------------------
-    # 1. Validate the script (AST checks)
-    # ------------------------------------------------------------------
-    try:
-        _script_validator.validate(script)
-    except ValidationError as exc:
-        tool_logger.warning("Script validation failed: %s", exc)
-        return toons.dumps({
-            "success": False,
-            "stage": "validation",
-            "error": str(exc),
-            "stdout": "",
-            "stderr": "",
-            "return_code": None,
-            "timed_out": False,
-            "duration_seconds": 0.0,
-        })
+    if unsafe:
+        # Unsafe mode: skip validation and guardrails entirely. The script runs
+        # with the full environment; only the timeout below still constrains it.
+        tool_logger.warning(
+            "execute_uhd_script called with unsafe=True: validation and "
+            "guardrails are DISABLED and the script runs with full I/O access."
+        )
+    else:
+        # ------------------------------------------------------------------
+        # 1. Validate the script (AST checks)
+        # ------------------------------------------------------------------
+        try:
+            _script_validator.validate(script)
+        except ValidationError as exc:
+            tool_logger.warning("Script validation failed: %s", exc)
+            return toons.dumps({
+                "success": False,
+                "stage": "validation",
+                "error": str(exc),
+                "stdout": "",
+                "stderr": "",
+                "return_code": None,
+                "timed_out": False,
+                "duration_seconds": 0.0,
+                "unsafe": False,
+            })
 
-    # ------------------------------------------------------------------
-    # 2. Guardrails – check script AST and metadata parameters
-    # ------------------------------------------------------------------
-    try:
-        _guardrails.check_script(script)
-        _guardrails.check_params(metadata)
-    except GuardrailViolation as exc:
-        tool_logger.warning("Guardrail violation: %s", exc)
-        return toons.dumps({
-            "success": False,
-            "stage": "guardrails",
-            "error": str(exc),
-            "stdout": "",
-            "stderr": "",
-            "return_code": None,
-            "timed_out": False,
-            "duration_seconds": 0.0,
-        })
+        # ------------------------------------------------------------------
+        # 2. Guardrails – check script AST and metadata parameters
+        # ------------------------------------------------------------------
+        try:
+            _guardrails.check_script(script)
+            _guardrails.check_params(metadata)
+        except GuardrailViolation as exc:
+            tool_logger.warning("Guardrail violation: %s", exc)
+            return toons.dumps({
+                "success": False,
+                "stage": "guardrails",
+                "error": str(exc),
+                "stdout": "",
+                "stderr": "",
+                "return_code": None,
+                "timed_out": False,
+                "duration_seconds": 0.0,
+                "unsafe": False,
+            })
 
     # ------------------------------------------------------------------
     # 3. Determine timeout from metadata (clamped to MAX_TIMEOUT_SECONDS)
@@ -1111,10 +1132,10 @@ def execute_uhd_script(script: str, metadata: Optional[Dict[str, Any]] = None) -
     timeout = min(max(1.0, requested_timeout), MAX_TIMEOUT_SECONDS)
 
     # ------------------------------------------------------------------
-    # 4. Execute in sandbox
+    # 4. Execute in sandbox (full environment when unsafe)
     # ------------------------------------------------------------------
     try:
-        executor = ScriptExecutor(timeout=timeout)
+        executor = ScriptExecutor(timeout=timeout, full_env=unsafe)
         result = executor.execute(script)
     except Exception as exc:
         tool_logger.error("Unexpected error during script execution: %s", exc)
@@ -1127,17 +1148,20 @@ def execute_uhd_script(script: str, metadata: Optional[Dict[str, Any]] = None) -
             "return_code": None,
             "timed_out": False,
             "duration_seconds": 0.0,
+            "unsafe": unsafe,
         })
 
     tool_logger.info(
-        "Script executed: success=%s, duration=%.2fs, timed_out=%s",
+        "Script executed: success=%s, duration=%.2fs, timed_out=%s, unsafe=%s",
         result.success,
         result.duration_seconds,
         result.timed_out,
+        unsafe,
     )
 
     response = result.to_dict()
     response["stage"] = "execution"
+    response["unsafe"] = unsafe
     return toons.dumps(response)
 
 

@@ -51,7 +51,4 @@ The deployment includes automatic repository updates on startup:
 ## Environment Variables
 
 - `MCP_SHARED_DATA_DIR`: Shared data storage directory
-- `VNC_HOST`: VNC server hostname for screenshots
-- `VNC_PORT`: VNC server port
-- `VNC_PASSWORD`: VNC server password
 - `PAT_TOKEN`: GitHub Personal Access Token (from secret)

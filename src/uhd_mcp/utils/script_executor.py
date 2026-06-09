@@ -88,7 +88,8 @@ class ScriptExecutor:
 
     Isolation mechanism:
     - Runs the script as a separate Python process (subprocess.run).
-    - The subprocess gets a clean environment with only PATH / HOME kept.
+    - The subprocess gets a clean environment with only PATH / HOME kept,
+      unless *full_env* is True (used by the unsafe execution path).
     - The subprocess is killed after *timeout* seconds.
 
     Note: This class does NOT re-validate the script. Call the validator and
@@ -99,6 +100,7 @@ class ScriptExecutor:
         self,
         timeout: float = DEFAULT_TIMEOUT_SECONDS,
         extra_env: Optional[Dict[str, str]] = None,
+        full_env: bool = False,
     ):
         if timeout <= 0:
             raise ValueError("timeout must be positive")
@@ -108,6 +110,9 @@ class ScriptExecutor:
             )
         self.timeout = timeout
         self.extra_env = extra_env or {}
+        # When True, the subprocess inherits the full parent environment instead
+        # of the minimal restricted one. Only used by the unsafe execution path.
+        self.full_env = full_env
 
     # ------------------------------------------------------------------
     # Public API
@@ -192,7 +197,16 @@ class ScriptExecutor:
     # ------------------------------------------------------------------
 
     def _build_env(self) -> Dict[str, str]:
-        """Build a minimal environment for the subprocess."""
+        """Build the environment for the subprocess.
+
+        In the default (restricted) mode only a minimal whitelist is kept. When
+        *full_env* is set the subprocess inherits the complete parent
+        environment (unsafe mode), lifting the I/O environment restriction.
+        """
+        if self.full_env:
+            env = os.environ.copy()
+            env.update(self.extra_env)
+            return env
         clean_env: Dict[str, str] = {}
         # Keep only PATH and HOME so standard Python can find itself
         for key in ("PATH", "HOME", "PYTHONPATH", "VIRTUAL_ENV"):
@@ -210,7 +224,8 @@ class ScriptExecutor:
 def execute_script(
     script: str,
     timeout: float = DEFAULT_TIMEOUT_SECONDS,
+    full_env: bool = False,
 ) -> ExecutionResult:
     """Execute *script* with the given timeout using a default ScriptExecutor."""
-    executor = ScriptExecutor(timeout=timeout)
+    executor = ScriptExecutor(timeout=timeout, full_env=full_env)
     return executor.execute(script)

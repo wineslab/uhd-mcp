@@ -5,6 +5,7 @@ These tests do NOT require physical UHD hardware and are suitable
 for execution in a CI/CD environment (e.g., GitHub Actions).
 """
 
+import os
 import time
 import pytest
 from uhd_mcp.utils.script_executor import (
@@ -219,6 +220,38 @@ class TestSandboxRestrictions:
         result = executor.execute(script)
         assert result.success is False
         assert result.return_code == 42
+
+
+# ---------------------------------------------------------------------------
+# 5b. Environment restriction (full_env toggle)
+# ---------------------------------------------------------------------------
+
+class TestEnvironmentRestriction:
+    """The default executor hides most environment variables; full_env lifts that."""
+
+    PROBE = "UHD_MCP_ENV_PROBE"
+    SCRIPT = (
+        "import os\n"
+        "print('probe=' + os.environ.get('UHD_MCP_ENV_PROBE', 'MISSING'))\n"
+    )
+
+    def test_restricted_env_hides_parent_vars(self):
+        os.environ[self.PROBE] = "leaked"
+        try:
+            result = ScriptExecutor(timeout=10.0).execute(self.SCRIPT)
+            assert result.success is True
+            assert "probe=MISSING" in result.stdout
+        finally:
+            del os.environ[self.PROBE]
+
+    def test_full_env_exposes_parent_vars(self):
+        os.environ[self.PROBE] = "leaked"
+        try:
+            result = ScriptExecutor(timeout=10.0, full_env=True).execute(self.SCRIPT)
+            assert result.success is True
+            assert "probe=leaked" in result.stdout
+        finally:
+            del os.environ[self.PROBE]
 
 
 # ---------------------------------------------------------------------------

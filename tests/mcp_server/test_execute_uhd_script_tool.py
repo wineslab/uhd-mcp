@@ -246,3 +246,74 @@ class TestErrorPropagation:
     def test_return_code_nonzero_on_failure(self):
         result = parse_result(execute_uhd_script("raise SystemExit(2)"))
         assert result["return_code"] != 0
+
+
+# ---------------------------------------------------------------------------
+# 6. Unsafe mode (bypasses validation AND guardrails)
+# ---------------------------------------------------------------------------
+
+class TestUnsafeMode:
+
+    def test_unsafe_allows_forbidden_import(self):
+        """A script importing os is normally rejected at validation; unsafe runs it."""
+        script = "import os\nprint('cwd-exists:', os.path.isdir(os.getcwd()))"
+        result = parse_result(execute_uhd_script(script, unsafe=True))
+        assert result["stage"] == "execution"
+        assert result["success"] is True
+        assert result["unsafe"] is True
+        assert "cwd-exists: True" in result["stdout"]
+
+    def test_unsafe_bypasses_metadata_guardrails(self):
+        """An out-of-range gain in metadata is skipped under unsafe mode."""
+        script = "print('ran anyway')"
+        metadata = {"gain": DEFAULT_MAX_TX_GAIN_DB + 1000}
+        result = parse_result(execute_uhd_script(script, metadata=metadata, unsafe=True))
+        assert result["stage"] == "execution"
+        assert result["success"] is True
+        assert result["unsafe"] is True
+
+    def test_unsafe_bypasses_script_guardrails(self):
+        """An unsafe tx-gain literal in the script is not flagged under unsafe mode."""
+        script = f"print('gain would be {DEFAULT_MAX_TX_GAIN_DB + 50}')"
+        result = parse_result(execute_uhd_script(script, unsafe=True))
+        assert result["stage"] == "execution"
+        assert result["success"] is True
+
+    def test_unsafe_uses_full_environment(self):
+        """Unsafe execution inherits the full parent environment."""
+        import os as _os
+        _os.environ["UHD_MCP_UNSAFE_PROBE"] = "visible"
+        try:
+            script = "import os\nprint('probe:', os.environ.get('UHD_MCP_UNSAFE_PROBE', 'missing'))"
+            result = parse_result(execute_uhd_script(script, unsafe=True))
+            assert result["success"] is True
+            assert "probe: visible" in result["stdout"]
+        finally:
+            del _os.environ["UHD_MCP_UNSAFE_PROBE"]
+
+    def test_default_still_blocks_forbidden_import(self):
+        """Regression: without unsafe, a forbidden import is rejected at validation."""
+        script = "import os\nos.system('ls')"
+        result = parse_result(execute_uhd_script(script, unsafe=False))
+        assert result["success"] is False
+        assert result["stage"] == "validation"
+        assert result["unsafe"] is False
+
+    def test_default_still_blocks_guardrail_violation(self):
+        """Regression: without unsafe, an out-of-range gain is rejected at guardrails."""
+        script = "print('test')"
+        metadata = {"gain": DEFAULT_MAX_TX_GAIN_DB + 10}
+        result = parse_result(execute_uhd_script(script, metadata=metadata, unsafe=False))
+        assert result["success"] is False
+        assert result["stage"] == "guardrails"
+        assert result["unsafe"] is False
+
+    def test_unsafe_skips_validator_and_guardrails_calls(self):
+        """Under unsafe mode the validator and guardrails must not be invoked."""
+        script = "print('ok')"
+        with patch("uhd_mcp.usrp_mcp_server._script_validator") as mock_validator, \
+             patch("uhd_mcp.usrp_mcp_server._guardrails") as mock_guardrails:
+            parse_result(execute_uhd_script(script, unsafe=True))
+            mock_validator.validate.assert_not_called()
+            mock_guardrails.check_script.assert_not_called()
+            mock_guardrails.check_params.assert_not_called()
