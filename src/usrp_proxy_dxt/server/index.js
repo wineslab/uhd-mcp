@@ -328,7 +328,7 @@ class USRPProxyServer {
                 },
                 samp_rate: {
                   type: "number",
-                  description: "Sample rate in Hz",
+                  description: "Sample rate in Hz (required, must be > 0). Without it the device transmits nothing.",
                 },
                 gain: {
                   type: "number",
@@ -419,7 +419,7 @@ class USRPProxyServer {
                   description: "Any additional command-line arguments",
                 },
               },
-              required: ["freq"],
+              required: ["freq", "samp_rate"],
             },
           },
           {

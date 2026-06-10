@@ -14,6 +14,7 @@ from typing import Optional, Dict, Any
 import threading
 import time
 import argparse
+import select
 
 import toons
 
@@ -43,6 +44,51 @@ running_processes = {}
 # it is still alive.  USRP hardware initialization typically takes 1-3 seconds, so
 # this value must be large enough to catch hardware-not-found / init failures.
 USRP_INIT_WAIT_SECONDS = 2.0
+
+# Substrings that, if seen on a UHD process's stderr during the init window, mean the
+# process is alive but not doing useful work (so reporting "running" would be a lie).
+# "Attempting to set tick rate to 0" is the classic silent-failure: the device streams
+# zero samples and transmits nothing while the process happily sits at its prompt.
+# Note: deliberately excludes the benign "failed to enable realtime scheduling" notice.
+UHD_ERROR_SIGNATURES = (
+    "Attempting to set tick rate to 0",
+    "Traceback (most recent call last)",
+    "RuntimeError",
+    "EnvironmentError",
+    "LookupError",
+    "[ERROR]",
+    "No devices found",
+)
+
+
+def _peek_stderr(process: subprocess.Popen, seconds: float) -> str:
+    """Read whatever a still-running process has written to stderr within `seconds`.
+
+    Uses select() so it never blocks waiting for a line that may never come from a
+    long-running process. Returns the consumed text; callers must stash it (the bytes
+    are gone from the pipe and won't be returned by a later communicate()).
+    """
+    stream = process.stderr
+    if stream is None:
+        return ""
+    captured = []
+    deadline = time.time() + seconds
+    while True:
+        remaining = deadline - time.time()
+        if remaining <= 0:
+            break
+        ready, _, _ = select.select([stream], [], [], remaining)
+        if not ready:
+            # No data yet; keep waiting until the deadline so init failures surface.
+            if process.poll() is not None:
+                break
+            continue
+        line = stream.readline()
+        if line == "":  # EOF: process closed stderr / exited
+            break
+        captured.append(line)
+    return "".join(captured)
+
 
 @mcp.tool()
 def uhd_find_devices() -> str:
@@ -155,11 +201,11 @@ def uhd_usrp_probe(args: str = "") -> str:
 @mcp.tool()
 def uhd_siggen(
     freq: float,
+    samp_rate: float,
     # USRP Arguments
     device_args: Optional[str] = None,
     spec: Optional[str] = None,
     antenna: Optional[str] = None,
-    samp_rate: Optional[float] = None,
     gain: Optional[float] = None,
     power: Optional[float] = None,
     lo_offset: Optional[float] = None,
@@ -188,10 +234,11 @@ def uhd_siggen(
     
     USRP Arguments:
         freq: RF center frequency in Hz (required, e.g., 2.4e9 for 2.4 GHz)
+        samp_rate: Sample rate in Hz (required, must be > 0). Without it the device
+            tick rate is 0 and NOTHING is transmitted even though the process stays alive.
         device_args: UHD device address args
         spec: Subdevice(s) specification
         antenna: Select Tx antenna(s)
-        samp_rate: Sample rate in Hz
         gain: TX gain in dB (conflicts with power)
         power: Reference power level in dBm (conflicts with gain)
         lo_offset: Daughterboard LO offset
@@ -222,8 +269,18 @@ def uhd_siggen(
     """
     try:
         logger = logging.getLogger(__name__)
+
+        # samp_rate is required and must be positive: a zero/negative rate makes UHD set
+        # the tick rate to 0, which transmits nothing while the process stays alive.
+        if samp_rate is None or samp_rate <= 0:
+            return toons.dumps({
+                "error": f"samp_rate must be a positive number of Hz (got {samp_rate}). "
+                         "A zero/unset sample rate produces no transmission.",
+                "success": False,
+            })
+
         cmd = ["uhd_siggen"]
-        
+
         # Required frequency argument
         cmd.extend(["--freq", str(freq)])
         
@@ -336,46 +393,78 @@ def uhd_siggen(
             timer_thread = threading.Thread(target=stop_after_duration, daemon=True)
             timer_thread.start()
         
-        # Wait long enough for USRP initialization to fail if the device is unavailable.
-        # UHD devices typically take 1-3 seconds to initialize, so 0.5 s was too short
-        # to catch hardware-not-found or initialization errors.
-        time.sleep(USRP_INIT_WAIT_SECONDS)
-        
-        if process.poll() is None:
-            # Process is running
-            if duration is None:
-                message = f"Signal generation started continuously. Use stop_process('{process_id}') to stop."
-                logger.info(f"Process {process_id} started continuously")
-            else:
-                message = f"Signal generation started for {duration} seconds. Will stop automatically or use stop_process('{process_id}') to stop early."
-                logger.info(f"Process {process_id} started for {duration} seconds")
-            
-            return toons.dumps({
-                "process_id": process_id,
-                "command": " ".join(cmd),
-                "status": "running",
-                "pid": process.pid,
-                "success": True,
-                "duration": duration,
-                "message": message
-            })
-        else:
-            # Process terminated immediately
+        # Wait long enough for USRP initialization to fail if the device is unavailable,
+        # while reading stderr so we can tell "started OK" from "alive but broken".
+        # UHD devices typically take 1-3 seconds to initialize.
+        early_stderr = _peek_stderr(process, USRP_INIT_WAIT_SECONDS)
+        # Stash the consumed stderr so a later stop_process() can still return it.
+        if process_id in running_processes:
+            running_processes[process_id]["captured_stderr"] = early_stderr
+
+        detected = [sig for sig in UHD_ERROR_SIGNATURES if sig in early_stderr]
+
+        if process.poll() is not None:
+            # Process terminated immediately (hardware not found, bad args, etc.)
             logger.warning(f"Process {process_id} terminated immediately")
             stdout, stderr = process.communicate()
             if process_id in running_processes:
                 del running_processes[process_id]
-            
+
             return toons.dumps({
                 "process_id": process_id,
                 "command": " ".join(cmd),
                 "return_code": process.returncode,
                 "stdout": stdout,
-                "stderr": stderr,
+                "stderr": early_stderr + stderr,
                 "success": False,
                 "duration": duration,
                 "message": f"Process terminated immediately (intended duration: {duration} seconds)"
             })
+
+        if detected:
+            # Alive but emitting a known failure signature -> not actually transmitting.
+            # Stop it and report failure instead of a misleading "running".
+            logger.warning(f"Process {process_id} alive but errored: {detected}")
+            try:
+                process.terminate()
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait()
+            stdout, stderr = process.communicate()
+            if process_id in running_processes:
+                del running_processes[process_id]
+
+            return toons.dumps({
+                "process_id": process_id,
+                "command": " ".join(cmd),
+                "return_code": process.returncode,
+                "stdout": stdout,
+                "stderr": early_stderr + stderr,
+                "success": False,
+                "duration": duration,
+                "errors_detected": detected,
+                "message": "Process started but reported errors and is not transmitting; "
+                           "it was stopped. See errors_detected/stderr.",
+            })
+
+        # Process is running and showed no error signatures
+        if duration is None:
+            message = f"Signal generation started continuously. Use stop_process('{process_id}') to stop."
+            logger.info(f"Process {process_id} started continuously")
+        else:
+            message = f"Signal generation started for {duration} seconds. Will stop automatically or use stop_process('{process_id}') to stop early."
+            logger.info(f"Process {process_id} started for {duration} seconds")
+
+        return toons.dumps({
+            "process_id": process_id,
+            "command": " ".join(cmd),
+            "status": "running",
+            "pid": process.pid,
+            "success": True,
+            "duration": duration,
+            "message": message
+        })
                 
     except subprocess.TimeoutExpired:
         return "Command timed out"
@@ -418,11 +507,12 @@ def stop_process(process_id: str) -> str:
                     process.wait()
             
             stdout, stderr = process.communicate()
+            stderr = process_info.get("captured_stderr", "") + stderr
             runtime = time.time() - process_info["start_time"]
             duration = process_info.get("duration", "continuous")
-            
+
             del running_processes[process_id]
-            
+
             logger.info(f"Process {process_id} stopped successfully after {round(runtime, 2)} seconds")
             
             response = {
@@ -443,6 +533,7 @@ def stop_process(process_id: str) -> str:
             # Process already terminated
             logger.info(f"Process {process_id} was already terminated")
             stdout, stderr = process.communicate()
+            stderr = process_info.get("captured_stderr", "") + stderr
             runtime = time.time() - process_info["start_time"]
             duration = process_info.get("duration", "continuous")
             

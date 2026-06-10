@@ -201,11 +201,11 @@ async def test_usrp_server(url='https://uhd-mcp.your-domain.example/mcp/'):
                     "name": "uhd_siggen",
                     "arguments": {
                         "freq": 2.4e9,
-                        "rate": 1e6,
+                        "samp_rate": 1e6,
                         "gain": 10,
                         "duration": 5.0,
-                        "wave_type": "SINE",
-                        "wave_freq": 1000,
+                        "waveform_type": "sine",
+                        "waveform_freq": 1000,
                         "amplitude": 0.3
                     }
                 }
@@ -226,10 +226,10 @@ async def test_usrp_server(url='https://uhd-mcp.your-domain.example/mcp/'):
                     "name": "uhd_siggen",
                     "arguments": {
                         "freq": 2.45e9,
-                        "rate": 1e6,
+                        "samp_rate": 1e6,
                         "gain": 5,
-                        "wave_type": "SINE",
-                        "wave_freq": 1000,
+                        "waveform_type": "sine",
+                        "waveform_freq": 1000,
                         "amplitude": 0.2
                     }
                 }
