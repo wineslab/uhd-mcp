@@ -4,8 +4,8 @@
   "display_name": "USRP MCP Proxy",
   "icon": "icon.png",
   "version": "0.0.2",
-  "description": "Local MCP proxy for remote USRP MCP server with spectrum analyzer, file download, and SDR capabilities",
-  "long_description": "This extension provides a local MCP proxy that connects to a remote USRP MCP server, enabling Claude Desktop to control software-defined radio equipment and spectrum analyzers. Features comprehensive signal generation with 25+ parameters, GNU Radio integration for data capture, spectrum waterfall analysis from Keysight EXA analyzers, file download from shared data layer, background process management, and professional logging. Includes device discovery, hardware probing, spectrum analysis, file management, and complete radio hardware control through a clean MCP interface.",
+  "description": "Local MCP proxy for remote USRP MCP server with file download and SDR capabilities",
+  "long_description": "This extension provides a local MCP proxy that connects to a remote USRP MCP server, enabling Claude Desktop to control software-defined radio equipment. Features comprehensive signal generation with 25+ parameters, GNU Radio integration for data capture, file download from shared data layer, background process management, and professional logging. Includes device discovery, hardware probing, file management, and complete radio hardware control through a clean MCP interface.",
   "author": {
     "name": "Andrea Lacava",
     "email": "a.lacava@northeastern.edu"
@@ -13,7 +13,7 @@
   "homepage": "https://github.com/wineslab/uhd-mcp",
   "documentation": "https://github.com/wineslab/uhd-mcp/blob/main/README.md",
   "support": "https://github.com/wineslab/uhd-mcp/issues",
-  "keywords": ["sdr", "usrp", "radio", "uhd", "mcp", "proxy", "wireless", "spectrum", "analyzer", "keysight", "waterfall"],
+  "keywords": ["sdr", "usrp", "radio", "uhd", "mcp", "proxy", "wireless"],
   "license": "MIT",
   "server": {
     "type": "node",
@@ -47,11 +47,7 @@
     },
     {
       "name": "list_shared_files",
-      "description": "List all files in the shared data directory (captures, waterfall plots, data files, etc.)"
-    },
-    {
-      "name": "capture_spectrum_waterfall",
-      "description": "Capture spectrum waterfall using continuous capture from Keysight EXA spectrum analyzer"
+      "description": "List all files in the shared data directory (IQ captures, data files, etc.)"
     },
     {
       "name": "get_uhd_info",

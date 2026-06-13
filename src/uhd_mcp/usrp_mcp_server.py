@@ -22,7 +22,6 @@ from .utils import (
     parse_uhd_find_devices_output, 
     parse_uhd_config_info_output,
     get_shared_data_dir,
-    capture_spectrum_waterfall as _capture_spectrum_waterfall,
     ScriptValidator,
     ValidationError,
     Guardrails,
@@ -991,81 +990,6 @@ def get_uhd_info() -> str:
         return "Command timed out after 10 seconds"
     except Exception as e:
         return f"Error getting UHD info: {str(e)}"
-
-@mcp.tool()
-def capture_spectrum_waterfall(
-    center_freq: float,
-    span: float, 
-    duration: float,
-    filename_prefix: str = "waterfall",
-    rbw: Optional[float] = None,
-    ref_level: Optional[float] = None
-) -> str:
-    """
-    Capture spectrum waterfall from Keysight EXA spectrum analyzer using continuous capture
-    
-    Args:
-        center_freq: Center frequency in Hz (e.g., 2.4e9 for 2.4 GHz)
-        span: Frequency span in Hz (e.g., 100e6 for 100 MHz)
-        duration: Total capture duration in seconds
-        filename_prefix: Prefix for output files (default: "waterfall")
-        rbw: Resolution bandwidth in Hz (optional)
-        ref_level: Reference level in dBm (optional)
-        
-    Returns:
-        JSON with capture results, file paths, and statistics
-    """
-    try:
-        logger = logging.getLogger(__name__)
-        
-        # Get the shared data layer directory  
-        shared_data_dir = get_shared_data_dir()
-        
-        # Capture spectrum waterfall
-        result = _capture_spectrum_waterfall(
-            center_freq=center_freq,
-            span=span,
-            duration=duration,
-            save_dir=shared_data_dir,
-            filename_prefix=filename_prefix,
-            rbw=rbw,
-            ref_level=ref_level
-        )
-        
-        if not result.get("success", False):
-            error_msg = result.get("error", "Unknown error")
-            logger.error(f"Spectrum waterfall capture failed: {error_msg}")
-            return toons.dumps({
-                "success": False,
-                "error": error_msg
-            })
-        
-        # Get file sizes
-        data_file = result.get("data_file", "")
-        plot_file = result.get("plot_file", "")
-        data_size = os.path.getsize(data_file) if os.path.exists(data_file) else 0
-        plot_size = os.path.getsize(plot_file) if os.path.exists(plot_file) else 0
-        
-        logger.info(f"Spectrum waterfall captured: {data_file} ({data_size} bytes), {plot_file} ({plot_size} bytes)")
-        
-        return toons.dumps({
-            "success": True,
-            "data_file": data_file,
-            "plot_file": plot_file,
-            "data_filename": os.path.basename(data_file) if data_file else "",
-            "plot_filename": os.path.basename(plot_file) if plot_file else "",
-            "data_size_bytes": data_size,
-            "plot_size_bytes": plot_size,
-            "statistics": result.get("statistics", {}),
-            "capture_duration": result.get("capture_duration", 0)
-        })
-        
-    except Exception as e:
-        logger.error(f"Spectrum waterfall capture error: {str(e)}")
-        return toons.dumps({
-            "success": False,
-            "error": str(e)
-        })
 
 @mcp.tool()
 def download_file(filename: str) -> File | Image:

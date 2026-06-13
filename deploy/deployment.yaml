@@ -2,9 +2,8 @@ kind: Deployment
 apiVersion: apps/v1
 metadata:
   name: uhd-mcp
+  # Replace with your target namespace
   namespace: your-namespace
-  annotations:
-    deployment.kubernetes.io/revision: '18'
 spec:
   replicas: 1
   selector:
@@ -16,15 +15,18 @@ spec:
       labels:
         app: uhd-mcp
       annotations:
+        # Pin CPU/IRQ for the radio workload (optional; OpenShift performance profile)
         cpu-load-balancing.crio.io: disable
         cpu-quota.crio.io: disable
         irq-load-balancing.crio.io: disable
+        # Attach the dedicated radio network. Replace with your SR-IOV network name.
         k8s.v1.cni.cncf.io/networks: your-sriov-network
     spec:
       containers:
         - resources:
             limits:
-              openshift.io/sriovnet_connectx_6: '1'
+              # Replace with your SR-IOV resource (e.g. openshift.io/<your_sriov_resource>: '1')
+              your-sriov-resource: '1'
           terminationMessagePath: /dev/termination-log
           name: container
           command:
@@ -42,7 +44,8 @@ spec:
               protocol: TCP
           env:
             - name: MCP_SHARED_DATA_DIR
-              value: "/app/uhd-mcp/shared-data-layer"
+              value: "/data/shared"
+            # Optional: only needed if you use the PAT_TOKEN repo auto-update path.
             - name: PAT_TOKEN
               valueFrom:
                 secretKeyRef:
@@ -50,10 +53,11 @@ spec:
                   key: token
           imagePullPolicy: Always
           terminationMessagePolicy: File
-          image: 'REPLACE_ME/mcp-uhd:latest'
+          # Replace with your container image reference
+          image: 'REPLACE_ME/uhd-mcp:latest'
           volumeMounts:
             - name: mcp-shared-data-layer-volume
-              mountPath: /app/uhd-mcp/shared-data-layer
+              mountPath: /data/shared
       volumes:
         - name: mcp-shared-data-layer-volume
           persistentVolumeClaim:
@@ -61,11 +65,11 @@ spec:
       restartPolicy: Always
       terminationGracePeriodSeconds: 30
       dnsPolicy: ClusterFirst
+      # On OpenShift the platform assigns an arbitrary non-root UID/GID from the
+      # namespace range, so you normally omit runAsUser/runAsGroup/fsGroup and let
+      # the SCC inject them. Set them explicitly only on plain Kubernetes.
       securityContext:
-        runAsUser: 1000
-        runAsGroup: 1000
         runAsNonRoot: true
-        fsGroup: 1000
         seccompProfile:
           type: RuntimeDefault
       schedulerName: default-scheduler

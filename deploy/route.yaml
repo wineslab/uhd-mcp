@@ -6,6 +6,8 @@ metadata:
   labels:
     app: uhd-mcp
 spec:
+  # OpenShift assigns a host automatically, or set one explicitly:
+  # host: uhd-mcp.your-domain.example
   to:
     kind: Service
     name: uhd-mcp-service

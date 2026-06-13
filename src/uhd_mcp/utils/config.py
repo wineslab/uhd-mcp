@@ -4,8 +4,8 @@ Configuration utilities for UHD MCP Server
 
 import os
 
-# Default configuration
-DEFAULT_SHARED_DATA_DIR = "/app/uhd-mcp/shared-data-layer"
+# Default configuration. Override with the MCP_SHARED_DATA_DIR environment variable.
+DEFAULT_SHARED_DATA_DIR = os.path.join(os.getcwd(), "shared-data-layer")
 
 
 def get_shared_data_dir():

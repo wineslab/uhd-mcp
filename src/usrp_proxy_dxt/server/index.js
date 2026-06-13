@@ -535,40 +535,6 @@ class USRPProxyServer {
             },
           },
           {
-            name: "capture_spectrum_waterfall",
-            description: "Capture spectrum waterfall from Keysight EXA spectrum analyzer using continuous capture. Saves data/plot files in the shared data directory.",
-            inputSchema: {
-              type: "object",
-              properties: {
-                center_freq: {
-                  type: "number",
-                  description: "Center frequency in Hz (e.g., 2.4e9 for 2.4 GHz)",
-                },
-                span: {
-                  type: "number", 
-                  description: "Frequency span in Hz (e.g., 100e6 for 100 MHz)",
-                },
-                duration: {
-                  type: "number",
-                  description: "Total capture duration in seconds",
-                },
-                filename_prefix: {
-                  type: "string",
-                  description: "Prefix for output files (default: 'waterfall')",
-                },
-                rbw: {
-                  type: "number",
-                  description: "Resolution bandwidth in Hz (optional)",
-                },
-                ref_level: {
-                  type: "number", 
-                  description: "Reference level in dBm (optional)",
-                },
-              },
-              required: ["center_freq", "span", "duration"],
-            },
-          },
-          {
             name: "download_file",
             description: "Download a file from the shared data layer. Returns the actual file content (images as ImageContent, other files as EmbeddedResource with proper MIME types)",
             inputSchema: {

@@ -1,5 +1,8 @@
 # USRP MCP Server
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
+
 A Model Context Protocol (MCP) server for controlling USRP software-defined radios using UHD (USRP Hardware Driver).
 
 ## Features
@@ -22,13 +25,13 @@ A Model Context Protocol (MCP) server for controlling USRP software-defined radi
 1. **Run the setup script**:
 
    ```bash
-   ./setup_usrp.sh
+   ./setup.sh
    ```
 
 2. **Start the server**:
 
    ```bash
-   ./quick_start.sh
+   ./start.sh
    ```
 
    Or manually (HTTP mode, default):
@@ -146,7 +149,7 @@ hatch run python -m uhd_mcp --port 8080
 hatch run python -m uhd_mcp --transport stdio
 
 # Run tests
-hatch run python test_usrp_client.py
+hatch -e dev run test
 
 # Development environment with extra tools
 hatch env create dev
@@ -166,6 +169,33 @@ See `docs/example_commands.md` for detailed usage examples.
 - Process cleanup on server shutdown
 - Always verify frequency allocations comply with local regulations
 
+See [SECURITY.md](SECURITY.md) for the full safety/security posture and how to report issues.
+
+## Container / Docker
+
+The [deploy/Dockerfile](deploy/Dockerfile) builds a self-contained image on `ubuntu:24.04`,
+compiling **UHD from source** at a version you choose (default `4.7.0.0`, tested up to `4.8.0.0`)
+alongside GNU Radio.
+
+```bash
+# Build (pick the UHD version you need)
+docker build -f deploy/Dockerfile --build-arg UHD_VERSION=4.7.0.0 -t uhd-mcp:4.7 .
+
+# Run against real USRPs and persist IQ captures
+docker run --rm --network host \
+  -v "$PWD/shared-data:/data/shared" \
+  uhd-mcp:4.7
+```
+
+- `--network host` lets `uhd_find_devices` reach Ethernet USRPs (X3x0/N3xx) on the host's radio network.
+- The bind mount persists captures written by `uhd_rx_cfile` to `MCP_SHARED_DATA_DIR` (`/data/shared` in the image).
+- **USB USRPs (B2xx)** additionally need device access: add `--privileged` or `-v /dev/bus/usb:/dev/bus/usb`.
+- On OpenShift/Kubernetes the SR-IOV NIC defined in [deploy/](deploy/) provides the radio network instead of `--network host`.
+
+## Contributing
+
+Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## License
 
-2025 Andrea Lacava All rights reserved
+Licensed under the MIT License — see [LICENSE](LICENSE). Copyright (c) 2025 Andrea Lacava.

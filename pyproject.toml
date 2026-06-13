@@ -27,14 +27,13 @@ classifiers = [
 dependencies = [
   "fastmcp>=3.4.2",
   "aiohttp>=3.8.0",
-  "Pillow>=9.0.0",
-  "matplotlib>=3.5.0",
   "numpy>=1.20.0",
   "toons>=0.5.0",
 ]
 
 [project.urls]
-Documentation = "https://github.com/wineslab/uhd-mcp/README.md"
+Homepage = "https://github.com/wineslab/uhd-mcp"
+Documentation = "https://github.com/wineslab/uhd-mcp#readme"
 Issues = "https://github.com/wineslab/uhd-mcp/issues"
 Source = "https://github.com/wineslab/uhd-mcp"
 
