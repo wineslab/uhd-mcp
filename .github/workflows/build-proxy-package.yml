@@ -1,28 +1,31 @@
 name: Build and Package USRP Proxy Extension
 
+# Build the DXT proxy package and publish a GitHub Release only when a version
+# tag is pushed (e.g. `v1.0.0`), or when manually dispatched. Pushing to a branch
+# no longer creates releases.
 on:
   push:
-    branches: [ main ]
+    tags:
+      - 'v*'
+  workflow_dispatch:
 
 jobs:
   build-proxy:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      with:
-        ref: ${{ github.head_ref || github.ref_name }}
-      
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '24'
-        
+
     - name: Install dependencies and dev tools
       working-directory: src/usrp_proxy_dxt
       run: npm install --include=dev
-      
+
     - name: Get version from manifest
       id: get_version
       working-directory: src/usrp_proxy_dxt
@@ -30,39 +33,39 @@ jobs:
         VERSION=$(node -e "console.log(JSON.parse(require('fs').readFileSync('manifest.json', 'utf8')).version)")
         echo "version=$VERSION" >> $GITHUB_OUTPUT
         echo "Package version: $VERSION"
-        
+
     - name: Create proxy package
       run: |
         cd src/usrp_proxy_dxt
         npx dxt pack .
-        mv *.dxt ../../usrp-proxy-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.dxt
-        
+        mv *.dxt ../../usrp-proxy-v${{ steps.get_version.outputs.version }}.dxt
+
     - name: Generate package checksums
       run: |
-        sha256sum usrp-proxy-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.dxt > checksums.txt
-        
+        sha256sum usrp-proxy-v${{ steps.get_version.outputs.version }}.dxt > checksums.txt
+
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: usrp-proxy-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}
+        name: usrp-proxy-v${{ steps.get_version.outputs.version }}
         path: |
-          usrp-proxy-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.dxt
+          usrp-proxy-v${{ steps.get_version.outputs.version }}.dxt
           checksums.txt
         retention-days: 90
-        
+
     - name: Create GitHub Release
+      # Only publish a release for tag pushes (not manual dispatch runs).
+      if: startsWith(github.ref, 'refs/tags/')
       uses: softprops/action-gh-release@v1
       with:
-        tag_name: proxy-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}
-        name: USRP MCP Proxy Extension v${{ steps.get_version.outputs.version }} (Build ${{ github.run_number }})
+        tag_name: ${{ github.ref_name }}
+        name: USRP MCP Proxy Extension ${{ github.ref_name }}
         body: |
-          **Version:** ${{ steps.get_version.outputs.version }}  
-          **Build:** ${{ github.run_number }}  
-          **Commit:** ${{ github.sha }}  
-          **Branch:** ${{ github.head_ref || github.ref_name }}  
-
+          **Version:** ${{ steps.get_version.outputs.version }}
+          **Tag:** ${{ github.ref_name }}
+          **Commit:** ${{ github.sha }}
         files: |
-          usrp-proxy-v${{ steps.get_version.outputs.version }}-build${{ github.run_number }}.dxt
+          usrp-proxy-v${{ steps.get_version.outputs.version }}.dxt
           checksums.txt
         draft: false
       env:

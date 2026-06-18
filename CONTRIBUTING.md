@@ -58,4 +58,4 @@ Three version sources must stay in sync when you cut a release:
 4. Open a PR describing what changed, how you tested it, and whether hardware was involved.
 
 By contributing you agree your contributions are licensed under the project's
-[MIT License](LICENSE).
+[MIT License](LICENSE) and that you will follow the [Code of Conduct](CODE_OF_CONDUCT.md).

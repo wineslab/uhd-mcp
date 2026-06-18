@@ -2,6 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
+[![Tests](https://github.com/wineslab/uhd-mcp/actions/workflows/tests-on-pr.yml/badge.svg)](https://github.com/wineslab/uhd-mcp/actions/workflows/tests-on-pr.yml)
 
 A Model Context Protocol (MCP) server for controlling USRP software-defined radios using UHD (USRP Hardware Driver).
 
@@ -194,7 +195,8 @@ docker run --rm --network host \
 
 ## Contributing
 
-Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
+Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). By participating you agree to
+the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## License
 

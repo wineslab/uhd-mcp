@@ -1,6 +1,6 @@
 {
   "name": "usrp-proxy-dxt",
-  "version": "0.0.2",
+  "version": "1.0.0",
   "description": "USRP MCP Proxy Desktop Extension",
   "main": "server/index.js",
   "type": "module",
