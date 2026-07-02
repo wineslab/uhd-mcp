@@ -1,0 +1,75 @@
+name: Release on VERSION bump
+
+# Fully automated releases: when a push to main changes VERSION to a value that
+# has no git tag yet, this workflow creates the tag and runs the release jobs
+# (proxy DXT release + container image) directly via workflow_call.
+#
+# Why not just auto-push the tag and let the tag-triggered workflows fire?
+# Tags pushed with the default GITHUB_TOKEN do not trigger other workflows
+# (GitHub blocks recursive triggering), so the release jobs are invoked here
+# explicitly. Pushing a tag by hand still works and uses the same workflows.
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+      new: ${{ steps.check.outputs.new }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check whether VERSION is untagged
+        id: check
+        run: |
+          VERSION=$(cat VERSION)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          if git ls-remote --exit-code --tags origin "refs/tags/$VERSION" >/dev/null; then
+            echo "VERSION $VERSION is already tagged — nothing to release."
+            echo "new=false" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION $VERSION has no tag — releasing."
+            echo "new=true" >> $GITHUB_OUTPUT
+          fi
+
+  tag:
+    needs: check
+    if: needs.check.outputs.new == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create and push tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "${{ needs.check.outputs.version }}"
+          git push origin "${{ needs.check.outputs.version }}"
+
+  proxy-release:
+    needs: [check, tag]
+    if: needs.check.outputs.new == 'true'
+    uses: ./.github/workflows/build-proxy-package.yml
+    permissions:
+      contents: write
+    with:
+      release: true
+
+  image:
+    needs: [check, tag]
+    if: needs.check.outputs.new == 'true'
+    uses: ./.github/workflows/build-mcp-image.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      push: true

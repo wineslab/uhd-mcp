@@ -55,17 +55,15 @@ mirror it there** or Claude Desktop won't see the change.
 `__version__` from the installed package metadata at runtime, and the release workflow stamps
 `src/usrp_proxy_dxt/manifest.json` from `VERSION` before packaging — don't edit versions there.
 
-To cut a release: bump `VERSION`, merge to `main`, then push a git tag matching it exactly
-(plain `X.Y.Z`, no `v` prefix):
+To cut a release: **bump `VERSION` and merge to `main`** — that's it.
+[release.yml](.github/workflows/release.yml) notices the new version, creates the matching
+git tag (plain `X.Y.Z`, no `v` prefix), publishes the proxy DXT as a GitHub release
+([build-proxy-package.yml](.github/workflows/build-proxy-package.yml)), and builds/pushes the
+container image to `ghcr.io/wineslab/uhd-mcp`
+([build-mcp-image.yml](.github/workflows/build-mcp-image.yml)).
 
-```bash
-git tag 0.1.0 && git push origin 0.1.0
-```
-
-The tag triggers the proxy DXT release ([build-proxy-package.yml](.github/workflows/build-proxy-package.yml))
-and the container image build/push to `ghcr.io/wineslab/uhd-mcp`
-([build-mcp-image.yml](.github/workflows/build-mcp-image.yml)). Both fail fast if the tag
-doesn't match `VERSION`.
+Pushing a matching tag by hand (`git tag 0.1.0 && git push origin 0.1.0`) triggers the same
+release workflows; they fail fast if the tag doesn't match `VERSION`.
 
 ## Pull request workflow
 

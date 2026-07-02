@@ -1,13 +1,20 @@
 name: Build and Package USRP Proxy Extension
 
-# Release flow: bump VERSION, then push a tag matching it (e.g. 0.1.0).
-# The tag is the single trigger for the proxy release; manifest.json is
-# stamped from VERSION at build time so it can never drift.
+# Release flow: bump VERSION and merge to main — release.yml tags the commit
+# and calls this workflow. Pushing a matching tag by hand also works.
+# manifest.json / package.json are stamped from VERSION at build time so they
+# can never drift. workflow_dispatch gives a build-only dry run.
 on:
   push:
     tags:
       - '*.*.*'
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      release:
+        description: "Create the GitHub release (the version tag must exist)"
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -76,10 +83,10 @@ jobs:
         retention-days: 90
 
     - name: Create GitHub Release
-      if: startsWith(github.ref, 'refs/tags/')
+      if: startsWith(github.ref, 'refs/tags/') || inputs.release == true
       uses: softprops/action-gh-release@v1
       with:
-        tag_name: ${{ github.ref_name }}
+        tag_name: ${{ steps.get_version.outputs.version }}
         name: uhd-mcp ${{ steps.get_version.outputs.version }}
         body: |
           **Version:** ${{ steps.get_version.outputs.version }}

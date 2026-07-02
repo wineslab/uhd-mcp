@@ -72,11 +72,12 @@ Topology:
 
 ### CI/release workflows — [.github/workflows/](.github/workflows/)
 - [tests-on-pr.yml](.github/workflows/tests-on-pr.yml) — runs the non-hardware pytest whitelist on PRs.
-- [build-proxy-package.yml](.github/workflows/build-proxy-package.yml) — on a release tag: stamps `manifest.json` from `VERSION`, packs the DXT, creates the GitHub release.
+- [release.yml](.github/workflows/release.yml) — on every `main` push: if `VERSION` has no matching git tag, creates the tag and invokes the two release workflows below via `workflow_call` (tags pushed with `GITHUB_TOKEN` can't trigger workflows themselves, hence the direct calls).
+- [build-proxy-package.yml](.github/workflows/build-proxy-package.yml) — stamps `manifest.json`/`package.json` from `VERSION`, packs the DXT, creates the GitHub release.
 - [build-deps-image.yml](.github/workflows/build-deps-image.yml) — builds/pushes `ghcr.io/wineslab/uhd-mcp-deps:uhd4.7`; runs on `workflow_dispatch` or when `deploy/Dockerfile` changes on `main`.
-- [build-mcp-image.yml](.github/workflows/build-mcp-image.yml) — on a release tag: builds `ghcr.io/wineslab/uhd-mcp` from the published deps image and pushes `X.Y.Z`, `X.Y`, `latest`, `sha-*` tags. `workflow_dispatch` gives a build-only dry run.
+- [build-mcp-image.yml](.github/workflows/build-mcp-image.yml) — builds `ghcr.io/wineslab/uhd-mcp` from the published deps image and pushes `X.Y.Z`, `X.Y`, `latest`, `sha-*` tags (derived from the `VERSION` file). `workflow_dispatch` gives a build-only dry run.
 
-Releases are **tag-driven**: push a git tag equal to `VERSION` (plain `X.Y.Z`, no `v` prefix). Both release workflows guard `tag == VERSION`. CI image pulls require the repo to have read access to the `wineslab/uhd` ghcr package.
+**Releasing = merging a `VERSION` bump to `main`.** Pushing a matching `X.Y.Z` tag by hand also triggers the release workflows directly; they guard `tag == VERSION`. CI image pulls require the repo to have read access to the `wineslab/uhd` ghcr package (`uhd-mcp` and `uhd-mcp-deps` are public; the `uhd` base is private).
 
 ### Bare-metal / systemd — [install-service.sh](install-service.sh)
 For a non-container host: writes a `usrp-mcp.service` unit that runs `hatch run python -m uhd_mcp --port 8080` as the current user with `Restart=always`, then enables it. Requires `./setup.sh` to have run first (needs `hatch` on PATH).

@@ -1,11 +1,10 @@
 name: Build MCP image
 
-# Builds ghcr.io/wineslab/uhd-mcp on every release tag (X.Y.Z, no "v" prefix),
-# reusing the published deps image so the release build is fast. Can also be
-# exercised via workflow_dispatch (build-only by default) for validation.
-#
-# Prerequisite: the ghcr.io/wineslab/uhd-mcp-deps image must exist (see
-# build-deps-image.yml) and be readable by this repo.
+# Builds ghcr.io/wineslab/uhd-mcp, reusing the published deps image so the
+# release build is fast. Invoked by release.yml (VERSION bump on main) or by a
+# manual X.Y.Z tag push; workflow_dispatch gives a build-only dry run.
+# Image tags are derived from the VERSION file, which the guard keeps equal to
+# the git tag on tag pushes.
 
 on:
   push:
@@ -17,6 +16,12 @@ on:
         description: "Push the image to ghcr.io"
         type: boolean
         default: false
+  workflow_call:
+    inputs:
+      push:
+        description: "Push the image to ghcr.io"
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -28,6 +33,13 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Read version from VERSION file
+        id: version
+        run: |
+          VERSION=$(cat VERSION)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "major_minor=${VERSION%.*}" >> $GITHUB_OUTPUT
 
       - name: Check tag matches VERSION
         if: startsWith(github.ref, 'refs/tags/')
@@ -52,8 +64,9 @@ jobs:
         with:
           images: ghcr.io/wineslab/uhd-mcp
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=${{ steps.version.outputs.version }}
+            type=raw,value=${{ steps.version.outputs.major_minor }}
+            type=raw,value=latest
             type=sha
 
       - name: Build (and optionally push) MCP image
