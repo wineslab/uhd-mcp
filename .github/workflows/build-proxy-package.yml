@@ -43,14 +43,17 @@ jobs:
       working-directory: src/usrp_proxy_dxt
       run: npm install --include=dev
 
-    - name: Stamp manifest.json version from VERSION
+    - name: Stamp manifest.json and package.json versions from VERSION
       working-directory: src/usrp_proxy_dxt
       run: |
         node -e "
           const fs = require('fs');
-          const m = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
-          m.version = fs.readFileSync('../../VERSION', 'utf8').trim();
-          fs.writeFileSync('manifest.json', JSON.stringify(m, null, 2) + '\n');
+          const version = fs.readFileSync('../../VERSION', 'utf8').trim();
+          for (const file of ['manifest.json', 'package.json']) {
+            const m = JSON.parse(fs.readFileSync(file, 'utf8'));
+            m.version = version;
+            fs.writeFileSync(file, JSON.stringify(m, null, 2) + '\n');
+          }
         "
 
     - name: Create proxy package

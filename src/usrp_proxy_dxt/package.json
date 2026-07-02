@@ -1,6 +1,6 @@
 {
   "name": "usrp-proxy-dxt",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "description": "USRP MCP Proxy Desktop Extension",
   "main": "server/index.js",
   "type": "module",
@@ -9,7 +9,7 @@
     "dev": "DEBUG_MODE=true node server/index.js",
     "test": "node test.js",
     "setup": "./dev-setup.sh",
-    "validate": "node -e \"console.log('✅ Manifest valid:', JSON.parse(require('fs').readFileSync('manifest.json', 'utf8')).name)\"",
+    "validate": "node -e \"console.log('\u2705 Manifest valid:', JSON.parse(require('fs').readFileSync('manifest.json', 'utf8')).name)\"",
     "pack": "npx dxt pack .",
     "build": "npm install --production && npx dxt pack .",
     "clean": "rm -rf node_modules package-lock.json *.dxt",

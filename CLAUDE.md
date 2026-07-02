@@ -82,7 +82,7 @@ Releases are **tag-driven**: push a git tag equal to `VERSION` (plain `X.Y.Z`, n
 For a non-container host: writes a `usrp-mcp.service` unit that runs `hatch run python -m uhd_mcp --port 8080` as the current user with `Restart=always`, then enables it. Requires `./setup.sh` to have run first (needs `hatch` on PATH).
 
 ## Versioning
-`VERSION` (single line, read by hatch via `[tool.hatch.version]`) is the **only** hand-edited version source. `src/uhd_mcp/__init__.py` derives `__version__` from installed package metadata (falling back to the `VERSION` file), and the proxy workflow stamps `src/usrp_proxy_dxt/manifest.json` from `VERSION` at build time. To release: bump `VERSION`, then push a matching `X.Y.Z` tag.
+`VERSION` (single line, read by hatch via `[tool.hatch.version]`) is the **only** hand-edited version source. `src/uhd_mcp/__init__.py` derives `__version__` from installed package metadata (falling back to the `VERSION` file), and the proxy workflow stamps `src/usrp_proxy_dxt/manifest.json` and `package.json` from `VERSION` at build time. To release: bump `VERSION`, then push a matching `X.Y.Z` tag.
 
 ## Stdio logging constraint
 In stdio transport, stdout carries the MCP protocol, so `main()` routes all logging to **stderr**. Never `print()` to stdout or add stdout logging in tool code paths — it will corrupt the stdio stream.
