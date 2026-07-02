@@ -7,7 +7,7 @@ name = "uhd-mcp"
 dynamic = ["version"]
 description = 'An MCP service for USRPs'
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 license = "MIT"
 keywords = []
 authors = [
@@ -16,8 +16,6 @@ authors = [
 classifiers = [
   "Development Status :: 4 - Beta",
   "Programming Language :: Python",
-  "Programming Language :: Python :: 3.8",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
@@ -27,7 +25,9 @@ classifiers = [
 dependencies = [
   "fastmcp>=3.4.2",
   "aiohttp>=3.8.0",
-  "numpy>=1.20.0",
+  # <2 because UHD (<=4.7) Python bindings are compiled against the NumPy 1.x
+  # ABI, and execute_uhd_script runs user scripts with this environment's numpy.
+  "numpy>=1.20.0,<2",
   "toons>=0.5.0",
 ]
 
@@ -60,6 +60,7 @@ dependencies = [
   "pytest-asyncio",
   "black",
   "ruff",
+  "mypy",
 ]
 
 [tool.hatch.envs.dev.scripts]
@@ -78,7 +79,18 @@ usrp-mcp-server = "uhd_mcp.usrp_mcp_server:main"
 [project.optional-dependencies]
 dev = [
   "pytest",
-  "pytest-asyncio", 
+  "pytest-asyncio",
   "black",
   "ruff",
+  "mypy",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.mypy]
+python_version = "3.10"
+# fastmcp/toons ship no type stubs; UHD tooling is exercised via subprocess.
+ignore_missing_imports = true
+check_untyped_defs = true

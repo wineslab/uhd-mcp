@@ -1,7 +1,7 @@
 # USRP MCP Server
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 
 A Model Context Protocol (MCP) server for controlling USRP software-defined radios using UHD (USRP Hardware Driver).
 
@@ -17,7 +17,7 @@ A Model Context Protocol (MCP) server for controlling USRP software-defined radi
 ## Prerequisites
 
 - **UHD (USRP Hardware Driver)**: Required for USRP communication ([UHD Installation Guide](https://files.ettus.com/manual/))
-- **Python 3.8+**: For running the server
+- **Python 3.10+**: For running the server
 - **Hatch**: Modern Python project management (installed automatically by setup script)
 
 ## Quick Setup
@@ -148,8 +148,19 @@ hatch run python -m uhd_mcp --port 8080
 # Run the server locally (stdio)
 hatch run python -m uhd_mcp --transport stdio
 
-# Run tests
+# Run tests (hardware and live e2e tests are skipped unless opted in)
 hatch -e dev run test
+
+# Live e2e test against a running server
+UHD_MCP_LIVE_URL=http://127.0.0.1:8080/mcp hatch -e dev run test tests/usrp_client/
+
+# Hardware tests against a connected USRP
+USRP_HW_TESTS=1 hatch -e dev run test tests/hardware/
+
+# Lint / format / type-check
+hatch -e dev run lint
+hatch -e dev run format
+hatch -e dev run type-check
 
 # Development environment with extra tools
 hatch env create dev
@@ -173,19 +184,39 @@ See [SECURITY.md](SECURITY.md) for the full safety/security posture and how to r
 
 ## Container / Docker
 
-The [deploy/Dockerfile](deploy/Dockerfile) builds a self-contained image on `ubuntu:24.04`,
-compiling **UHD from source** at a version you choose (default `4.7.0.0`, tested up to `4.8.0.0`)
-alongside GNU Radio.
+Released versions are published as container images:
 
 ```bash
-# Build (pick the UHD version you need)
-docker build -f deploy/Dockerfile --build-arg UHD_VERSION=4.7.0.0 -t uhd-mcp:4.7 .
+docker pull ghcr.io/wineslab/uhd-mcp:latest   # or a specific version, e.g. :0.1.0
+```
+
+The [deploy/Dockerfile](deploy/Dockerfile) is a multi-stage build with a selectable UHD source:
+
+- **prebuilt** (default): builds on the org UHD base image `ghcr.io/wineslab/uhd` and adds a
+  `deps` layer (GNU Radio, pipx, FPGA images) plus the app. Requires `docker login ghcr.io`
+  while those base images are private.
+- **source**: fully self-contained — compiles **UHD from source** at a version you choose
+  (default `4.7.0.0`, tested up to `4.8.0.0`) on public `ubuntu:24.04`. No registry access needed.
+
+```bash
+# Build on the org UHD base (default)
+docker build -f deploy/Dockerfile -t uhd-mcp .
+
+# Fast build reusing the published deps image (what release CI does)
+docker build -f deploy/Dockerfile --build-arg DEPS_IMAGE=ghcr.io/wineslab/uhd-mcp-deps:uhd4.7 -t uhd-mcp .
+
+# Fully self-contained build (pick the UHD version you need)
+docker build -f deploy/Dockerfile --build-arg UHD_FLAVOR=source --build-arg UHD_VERSION=4.7.0.0 -t uhd-mcp .
 
 # Run against real USRPs and persist IQ captures
+mkdir -p shared-data   # pre-create so it isn't root-owned (container runs as UID 1000)
 docker run --rm --network host \
   -v "$PWD/shared-data:/data/shared" \
-  uhd-mcp:4.7
+  uhd-mcp
 ```
+
+Add `--build-arg DOWNLOAD_UHD_IMAGES=false` for a much smaller image without the bundled
+FPGA images (needed only for flashing networked USRPs).
 
 - `--network host` lets `uhd_find_devices` reach Ethernet USRPs (X3x0/N3xx) on the host's radio network.
 - The bind mount persists captures written by `uhd_rx_cfile` to `MCP_SHARED_DATA_DIR` (`/data/shared` in the image).

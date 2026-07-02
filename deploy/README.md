@@ -10,17 +10,30 @@ placeholders for your environment:
 | `your-sriov-network` / `your-sriov-resource` | Your SR-IOV network name and resource (the dedicated radio network the USRP is reached over) |
 | `uhd-mcp.your-domain.example` | Your external route host (optional) |
 
-## 1. Build and push the image
+## 1. Choose an image
 
-There is no managed image build in this repo — build it yourself from [the Dockerfile](Dockerfile)
+Releases are built automatically ([build-mcp-image.yml](../.github/workflows/build-mcp-image.yml))
+and published to `ghcr.io/wineslab/uhd-mcp` — prefer a pinned version:
+
+```
+ghcr.io/wineslab/uhd-mcp:0.1.0
+```
+
+To build yourself instead (e.g. for a custom UHD version), use [the Dockerfile](Dockerfile)
 and push to your registry:
 
 ```bash
-docker build -f deploy/Dockerfile --build-arg UHD_VERSION=4.7.0.0 -t REPLACE_ME/uhd-mcp:latest .
+# Self-contained build, UHD compiled from source (no registry access needed)
+# (run from the repository root)
+docker build -f deploy/Dockerfile --build-arg UHD_FLAVOR=source \
+  --build-arg UHD_VERSION=4.7.0.0 -t REPLACE_ME/uhd-mcp:latest .
 docker push REPLACE_ME/uhd-mcp:latest
 ```
 
-See the repository [README](../README.md) for the full build/run options.
+See the repository [README](../README.md) for the full build/run options, including a
+smaller image via `--build-arg DOWNLOAD_UHD_IMAGES=false` (FPGA images can instead be
+provided at runtime by mounting them at `/usr/local/share/uhd/images` or running
+`uhd_images_downloader` in the container).
 
 ## 2. (Optional) GitHub PAT secret
 

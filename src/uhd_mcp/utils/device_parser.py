@@ -4,7 +4,7 @@ UHD Device Parser Utilities
 This module contains functions for parsing UHD command outputs into structured data.
 """
 
-from typing import Dict, List, Any
+from typing import Dict, Any
 
 
 def parse_uhd_find_devices_output(output: str) -> Dict[str, Any]:
@@ -21,9 +21,9 @@ def parse_uhd_find_devices_output(output: str) -> Dict[str, Any]:
         - products: Count of each product type
         - devices: List of parsed device information
     """
-    devices = []
-    current_device = None
-    
+    devices: list[Dict[str, Any]] = []
+    current_device: Dict[str, Any] | None = None
+
     lines = output.strip().split('\n')
     
     for line in lines:
@@ -48,19 +48,20 @@ def parse_uhd_find_devices_output(output: str) -> Dict[str, Any]:
         elif line and current_device is not None and ":" in line and not line.startswith("-"):
             # Parse key-value pairs
             try:
-                key, value = line.split(":", 1)
+                key, raw_value = line.split(":", 1)
                 key = key.strip()
-                value = value.strip()
-                
+                raw_value = raw_value.strip()
+
                 # Convert boolean strings
-                if value.lower() == "false":
+                value: Any = raw_value
+                if raw_value.lower() == "false":
                     value = False
-                elif value.lower() == "true":
+                elif raw_value.lower() == "true":
                     value = True
                 # Convert numeric strings if they look like numbers
-                elif value.isdigit():
-                    value = int(value)
-                
+                elif raw_value.isdigit():
+                    value = int(raw_value)
+
                 current_device["device_address"][key] = value
             except ValueError:
                 # Skip lines that don't parse correctly
@@ -72,8 +73,8 @@ def parse_uhd_find_devices_output(output: str) -> Dict[str, Any]:
     
     # Calculate summary statistics
     total_devices = len(devices)
-    device_types = {}
-    products = {}
+    device_types: Dict[str, int] = {}
+    products: Dict[str, int] = {}
     
     for device in devices:
         addr = device.get("device_address", {})
@@ -101,8 +102,8 @@ def parse_uhd_config_info_output(output: str) -> Dict[str, Any]:
     Returns:
         Dictionary with parsed UHD configuration information
     """
-    config = {}
-    
+    config: Dict[str, Any] = {}
+
     lines = output.strip().split('\n')
     
     for line in lines:

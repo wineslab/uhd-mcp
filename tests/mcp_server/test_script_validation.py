@@ -11,9 +11,6 @@ from uhd_mcp.utils.script_validator import (
     ValidationError,
     validate_script,
     is_valid_script,
-    ALLOWED_IMPORTS,
-    FORBIDDEN_IMPORTS,
-    FORBIDDEN_BUILTINS,
 )
 
 

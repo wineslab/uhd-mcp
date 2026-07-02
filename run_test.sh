@@ -14,7 +14,7 @@ if ! command -v hatch &> /dev/null; then
     exit 1
 fi
 
-# Run the test using hatch
-hatch run python test_usrp_client.py "$@"
+# Run the live e2e client using hatch
+hatch run python tests/usrp_client/test_usrp_client.py "$@"
 
 echo "Test completed."

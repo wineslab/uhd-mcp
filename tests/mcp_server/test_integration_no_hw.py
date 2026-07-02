@@ -8,9 +8,8 @@ physical UHD hardware.
 These tests are suitable for CI/CD environments (e.g., GitHub Actions).
 """
 
-import pytest
 import toons
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from uhd_mcp.usrp_mcp_server import execute_uhd_script
 from uhd_mcp.utils.guardrails import (

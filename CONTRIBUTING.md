@@ -23,10 +23,17 @@ or use the container in [deploy/Dockerfile](deploy/Dockerfile).
 ## Checks to run before opening a PR
 
 ```bash
-hatch -e dev run test          # pytest
+hatch -e dev run test          # pytest (hardware/live e2e tests skip unless opted in)
 hatch -e dev run lint          # ruff check .
 hatch -e dev run format        # black .  (or format-check to verify without writing)
 hatch -e dev run type-check    # mypy src
+```
+
+With hardware or a running server you can additionally run the gated suites:
+
+```bash
+USRP_HW_TESTS=1 hatch -e dev run test tests/hardware/                            # real USRP
+UHD_MCP_LIVE_URL=http://127.0.0.1:8080/mcp hatch -e dev run test tests/usrp_client/  # live e2e
 ```
 
 Please keep new tools consistent with the existing conventions documented in
@@ -42,13 +49,23 @@ The Node.js Desktop Extension in [src/usrp_proxy_dxt/](src/usrp_proxy_dxt/) re-d
 schema in `manifest.json` and `server/index.js`. **If you add or change a Python tool's signature,
 mirror it there** or Claude Desktop won't see the change.
 
-## Versioning
+## Versioning and releases
 
-Three version sources must stay in sync when you cut a release:
+`VERSION` (repo root) is the single source of truth. `src/uhd_mcp/__init__.py` derives
+`__version__` from the installed package metadata at runtime, and the release workflow stamps
+`src/usrp_proxy_dxt/manifest.json` from `VERSION` before packaging — don't edit versions there.
 
-- `VERSION` (read by Hatch)
-- `src/uhd_mcp/__init__.py` `__version__`
-- `src/usrp_proxy_dxt/manifest.json` `version`
+To cut a release: bump `VERSION`, merge to `main`, then push a git tag matching it exactly
+(plain `X.Y.Z`, no `v` prefix):
+
+```bash
+git tag 0.1.0 && git push origin 0.1.0
+```
+
+The tag triggers the proxy DXT release ([build-proxy-package.yml](.github/workflows/build-proxy-package.yml))
+and the container image build/push to `ghcr.io/wineslab/uhd-mcp`
+([build-mcp-image.yml](.github/workflows/build-mcp-image.yml)). Both fail fast if the tag
+doesn't match `VERSION`.
 
 ## Pull request workflow
 

@@ -8,9 +8,8 @@ The MCP tool is tested by calling it directly as a Python function
 (bypassing the HTTP/MCP transport layer).
 """
 
-import pytest
 import toons
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from uhd_mcp.usrp_mcp_server import execute_uhd_script
 from uhd_mcp.utils.guardrails import DEFAULT_MAX_TX_GAIN_DB, DEFAULT_MAX_FREQ_HZ, DEFAULT_MAX_SAMPLE_RATE_HZ

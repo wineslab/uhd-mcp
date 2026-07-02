@@ -22,7 +22,9 @@ hatch -e dev run format                         # black .
 hatch -e dev run type-check                     # mypy src
 ```
 
-Note: `run_test.sh` and the README reference `test_usrp_client.py` at the repo root, but the actual test client lives at [tests/usrp_client/test_usrp_client.py](tests/usrp_client/test_usrp_client.py). It is a live integration client that POSTs JSON-RPC to a running HTTP server — not a pytest unit test.
+Two test suites are gated behind env vars and skip in default runs:
+- [tests/usrp_client/test_usrp_client.py](tests/usrp_client/test_usrp_client.py) — live e2e over HTTP JSON-RPC; runs only when `UHD_MCP_LIVE_URL` points at a running server's `/mcp` endpoint. Also runnable standalone: `hatch run python tests/usrp_client/test_usrp_client.py <host> <port>` (or `./run_test.sh`).
+- [tests/hardware/](tests/hardware/) — requires `USRP_HW_TESTS=1` *and* a reachable USRP (auto-detected via `uhd_find_devices`); optional `USRP_ADDR` pins a specific device. The `execute_uhd_script` tests need the UHD Python bindings importable from the sandbox: if UHD was built from source, set `PYTHONPATH=/usr/local/lib/python3.X/site-packages` (the sandbox whitelists `PYTHONPATH`; the container image sets it already).
 
 ## Architecture
 
@@ -50,7 +52,13 @@ A separate **Node.js** MCP server (Desktop Extension, DXT spec v0.1) that bridge
 ## Deployment
 
 ### Container image — [deploy/Dockerfile](deploy/Dockerfile)
-Builds `FROM ubuntu:24.04`, compiles **UHD from source** at a selectable version (`ARG UHD_VERSION`, default `4.7.0.0`) plus GNU Radio + pipx, creates a non-root `mcp` user, `COPY`s the local build context into the image, runs `./setup.sh`, and uses `CMD ["./start.sh"]`. Captures persist via the `/data/shared` volume (`MCP_SHARED_DATA_DIR`). To reach Ethernet USRPs, run with `--network host`; USB USRPs additionally need device passthrough. See [README.md](README.md) for the full `docker build`/`docker run` commands.
+A **multi-stage** build with a selectable UHD source (all recipes documented in the Dockerfile header and [README.md](README.md)):
+- `uhd-source` — compiles UHD from source (`ARG UHD_VERSION`, default `4.7.0.0`) on `ubuntu:24.04`; the self-contained path (`--build-arg UHD_FLAVOR=source`), works without registry access, any arch.
+- `uhd-prebuilt` — `FROM ${UHD_BASE_IMAGE}` (default `ghcr.io/wineslab/uhd:4.7`, amd64-only, currently private → needs `docker login ghcr.io`). This is the default flavor.
+- `deps` — adds what the UHD base lacks: GNU Radio (`uhd_siggen`/`uhd_rx_cfile`), pipx, network tooling, and FPGA images (`ARG DOWNLOAD_UHD_IMAGES=true`). Published as `ghcr.io/wineslab/uhd-mcp-deps:uhd4.7`; pass `--build-arg DEPS_IMAGE=<ref>` to reuse it and skip this stage.
+- `mcp` (final) — `COPY`s the app, creates the non-root `mcp` user (uid 1000, gid 0, group-writable for OpenShift), runs `./setup.sh`, `CMD ["./start.sh"]`.
+
+Captures persist via the `/data/shared` volume (`MCP_SHARED_DATA_DIR`). To reach Ethernet USRPs, run with `--network host`; USB USRPs additionally need device passthrough.
 
 ### OpenShift/Kubernetes — [deploy/](deploy/)
 The manifests in [deploy/](deploy/) are **generic templates** — placeholders (`your-namespace`, `REPLACE_ME/uhd-mcp:latest`, `your-sriov-network`, `uhd-mcp.your-domain.example`) must be replaced for your cluster. Apply order (see [deploy/README.md](deploy/README.md)):
@@ -62,13 +70,19 @@ Topology:
 - It can attach an **SR-IOV** NIC (`k8s.v1.cni.cncf.io/networks` annotation + an `openshift.io/sriovnet_*` resource) for a dedicated radio network the USRP is reached over — adjust the network/resource names to your cluster.
 - **Service** is `ClusterIP` on 8080; **Route** exposes it externally with edge TLS (HTTPS, HTTP→HTTPS redirect). The public MCP endpoint is the route host + `/mcp`.
 
-The proxy build workflow only packages the DXT extension and cuts a GitHub release; **it does not build or push the container image**.
+### CI/release workflows — [.github/workflows/](.github/workflows/)
+- [tests-on-pr.yml](.github/workflows/tests-on-pr.yml) — runs the non-hardware pytest whitelist on PRs.
+- [build-proxy-package.yml](.github/workflows/build-proxy-package.yml) — on a release tag: stamps `manifest.json` from `VERSION`, packs the DXT, creates the GitHub release.
+- [build-deps-image.yml](.github/workflows/build-deps-image.yml) — builds/pushes `ghcr.io/wineslab/uhd-mcp-deps:uhd4.7`; runs on `workflow_dispatch` or when `deploy/Dockerfile` changes on `main`.
+- [build-mcp-image.yml](.github/workflows/build-mcp-image.yml) — on a release tag: builds `ghcr.io/wineslab/uhd-mcp` from the published deps image and pushes `X.Y.Z`, `X.Y`, `latest`, `sha-*` tags. `workflow_dispatch` gives a build-only dry run.
+
+Releases are **tag-driven**: push a git tag equal to `VERSION` (plain `X.Y.Z`, no `v` prefix). Both release workflows guard `tag == VERSION`. CI image pulls require the repo to have read access to the `wineslab/uhd` ghcr package.
 
 ### Bare-metal / systemd — [install-service.sh](install-service.sh)
 For a non-container host: writes a `usrp-mcp.service` unit that runs `hatch run python -m uhd_mcp --port 8080` as the current user with `Restart=always`, then enables it. Requires `./setup.sh` to have run first (needs `hatch` on PATH).
 
-## Versioning gotcha
-There are **three** version sources that can drift: `VERSION` (single line, read by hatch via `[tool.hatch.version]`), `src/uhd_mcp/__init__.py` `__version__`, and `src/usrp_proxy_dxt/manifest.json` `version`. The proxy build workflow ([.github/workflows/build-proxy-package.yml](.github/workflows/build-proxy-package.yml)) reads the version from `manifest.json` and publishes a GitHub release on every push to `main`.
+## Versioning
+`VERSION` (single line, read by hatch via `[tool.hatch.version]`) is the **only** hand-edited version source. `src/uhd_mcp/__init__.py` derives `__version__` from installed package metadata (falling back to the `VERSION` file), and the proxy workflow stamps `src/usrp_proxy_dxt/manifest.json` from `VERSION` at build time. To release: bump `VERSION`, then push a matching `X.Y.Z` tag.
 
 ## Stdio logging constraint
 In stdio transport, stdout carries the MCP protocol, so `main()` routes all logging to **stderr**. Never `print()` to stdout or add stdout logging in tool code paths — it will corrupt the stdio stream.

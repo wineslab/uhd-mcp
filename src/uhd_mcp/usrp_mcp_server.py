@@ -25,7 +25,6 @@ from .utils import (
     ScriptValidator,
     ValidationError,
     Guardrails,
-    GuardrailPolicy,
     GuardrailViolation,
     ScriptExecutor,
     DEFAULT_TIMEOUT_SECONDS,
@@ -37,7 +36,7 @@ from .utils import (
 mcp = FastMCP("USRP Control Server")
 
 # Global variable to track running processes
-running_processes = {}
+running_processes: Dict[str, Dict[str, Any]] = {}
 
 # Seconds to wait after spawning a background UHD process before checking whether
 # it is still alive.  USRP hardware initialization typically takes 1-3 seconds, so
@@ -381,6 +380,7 @@ def uhd_siggen(
                 if process_id in running_processes and process.poll() is None:
                     # Send newline to stop uhd_siggen gracefully
                     try:
+                        assert process.stdin is not None  # spawned with stdin=PIPE
                         process.stdin.write('\n')
                         process.stdin.flush()
                     except Exception as e:
@@ -493,7 +493,7 @@ def stop_process(process_id: str) -> str:
                 process.stdin.write('\n')
                 process.stdin.flush()
                 process.wait(timeout=3)  # Wait up to 3 seconds for graceful stop
-            except:
+            except Exception:
                 # If stdin fails or timeout, use terminate
                 logger.warning(f"Graceful stop failed for {process_id}, using terminate")
                 process.terminate()
@@ -947,7 +947,7 @@ def cleanup_all_processes() -> str:
     stopped_processes = []
     
     for process_id in list(running_processes.keys()):
-        result = stop_process(process_id)
+        stop_process(process_id)
         stopped_processes.append(f"Stopped {process_id}")
     
     return f"Cleaned up {len(stopped_processes)} processes:\n" + "\n".join(stopped_processes)
@@ -1189,9 +1189,9 @@ def cleanup_on_exit():
             try:
                 stop_process(process_id)
                 logger.debug(f"Cleaned up process {process_id}")
-            except:
+            except Exception:
                 logger.error(f"Failed to cleanup process {process_id}")
-                pass  # Ignore errors during cleanup
+                # Ignore errors during cleanup
     else:
         logger.debug("No processes to cleanup on exit")
 

@@ -16,7 +16,6 @@ Usage with hardware:
 
 import os
 import toons
-import time
 import pytest
 import subprocess
 
@@ -87,7 +86,7 @@ class TestHardwareDeviceDiscovery:
         execute_uhd_script = _get_tool()
         script = (
             "import uhd\n"
-            "devices = uhd.find('', find_all=True)\n"
+            "devices = uhd.find('')\n"
             "print('Found devices:', len(devices))\n"
             "for dev in devices:\n"
             "    print(' -', dev)\n"

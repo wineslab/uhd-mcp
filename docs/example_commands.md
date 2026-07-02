@@ -23,11 +23,17 @@ hatch run python -m uhd_mcp --help
 ## Running Tests
 
 ```bash
-# Run test client
-hatch run python test_usrp_client.py
+# Unit and integration tests (no hardware needed)
+hatch -e dev run test
 
-# Run with custom host/port
-hatch run python test_usrp_client.py 192.168.1.100 8080
+# Live end-to-end test against a running server
+UHD_MCP_LIVE_URL=http://127.0.0.1:8080/mcp hatch -e dev run test tests/usrp_client/
+
+# Or run the live client standalone with custom host/port
+hatch run python tests/usrp_client/test_usrp_client.py 192.168.1.100 8080
+
+# Hardware tests against a connected USRP
+USRP_HW_TESTS=1 hatch -e dev run test tests/hardware/
 ```
 
 ## Basic Device Discovery

@@ -3,7 +3,7 @@
   "name": "usrp-proxy",
   "display_name": "USRP MCP Proxy",
   "icon": "icon.png",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "description": "Local MCP proxy for remote USRP MCP server with file download and SDR capabilities",
   "long_description": "This extension provides a local MCP proxy that connects to a remote USRP MCP server, enabling Claude Desktop to control software-defined radio equipment. Features comprehensive signal generation with 25+ parameters, GNU Radio integration for data capture, file download from shared data layer, background process management, and professional logging. Includes device discovery, hardware probing, file management, and complete radio hardware control through a clean MCP interface.",
   "author": {
@@ -13,14 +13,24 @@
   "homepage": "https://github.com/wineslab/uhd-mcp",
   "documentation": "https://github.com/wineslab/uhd-mcp/blob/main/README.md",
   "support": "https://github.com/wineslab/uhd-mcp/issues",
-  "keywords": ["sdr", "usrp", "radio", "uhd", "mcp", "proxy", "wireless"],
+  "keywords": [
+    "sdr",
+    "usrp",
+    "radio",
+    "uhd",
+    "mcp",
+    "proxy",
+    "wireless"
+  ],
   "license": "MIT",
   "server": {
     "type": "node",
     "entry_point": "server/index.js",
     "mcp_config": {
       "command": "node",
-      "args": ["${__dirname}/server/index.js"],
+      "args": [
+        "${__dirname}/server/index.js"
+      ],
       "env": {
         "USRP_SERVER_URL": "${user_config.server_url}",
         "REQUEST_TIMEOUT": "${user_config.request_timeout}",
@@ -69,12 +79,15 @@
       "name": "download_file",
       "description": "Download files from the shared data layer with automatic format detection (images display directly, other files as downloadable resources)"
     }
-
   ],
   "tools_generated": false,
   "compatibility": {
     "claude_desktop": ">=0.12.0",
-    "platforms": ["darwin", "win32", "linux"],
+    "platforms": [
+      "darwin",
+      "win32",
+      "linux"
+    ],
     "runtimes": {
       "node": ">=16.0.0"
     }
